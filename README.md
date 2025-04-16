@@ -104,3 +104,8 @@ npm run dev
 # Build for production
 npm run build
 ```
+
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
