@@ -2,6 +2,9 @@ import { reactive, readonly, inject, provide } from 'vue';
 import sc from '../helpers/steemlogin';
 import { IAccount } from '../interfaces';
 import AccountService from '../services/account';
+import client from '../helpers/client';
+import { PrivateKey } from 'dsteem';
+import EncryptionService from '../services/encryption';
 
 const appName = import.meta.env.VITE_APP_NAME;
 
@@ -9,7 +12,7 @@ interface AuthState {
     isAuthenticated: boolean;
     username: string;
     account: IAccount | null;
-    loginAuth: string;
+    loginAuth: 'steem' | 'keychain' | 'steemlogin';
 }
 
 interface AuthStore {
@@ -18,6 +21,9 @@ interface AuthStore {
     logout: () => void;
     handleLogin: (username: string, keychainLogin: boolean, posting_key?: string) => Promise<void>;
     checkUser: () => Promise<void>;
+    validatePostingKey: (username: string, postingKey: string) => Promise<boolean>;
+    get username(): string;
+    get loginAuth(): 'steem' | 'keychain' | 'steemlogin';
 }
 
 const createAuthStore = (): AuthStore => {
@@ -27,6 +33,26 @@ const createAuthStore = (): AuthStore => {
         account: null,
         loginAuth: 'steem'
     });
+
+    const validatePostingKey = async (username: string, postingKey: string): Promise<boolean> => {
+        try {
+            const accounts = await client.database.getAccounts([username]);
+            if (!accounts || accounts.length === 0) {
+                throw new Error('Account not found');
+            }
+
+            const account = accounts[0];
+            const accountPostingKey = account.posting.key_auths[0][0];
+
+            const privateKey = PrivateKey.fromString(postingKey);
+            const derivedPublicKey = privateKey.createPublic().toString();
+
+            return accountPostingKey === derivedPublicKey;
+        } catch (error) {
+            console.error('Posting key validation error:', error);
+            return false;
+        }
+    };
 
     const slogin = async (access_token: string) => {
         if (localStorage.getItem(appName + '-access_token') || access_token) {
@@ -94,13 +120,24 @@ const createAuthStore = (): AuthStore => {
                 if (!posting_key) {
                     throw new Error('Posting key is required when not using Keychain');
                 }
+
+                const isValid = await validatePostingKey(username, posting_key);
+                if (!isValid) {
+                    throw new Error('Invalid posting key');
+                }
+
+                // Generate encryption key using username and posting key as password
+                await EncryptionService.generateEncryptionKey(username, posting_key);
+
+                // Encrypt and store the posting key
+                await EncryptionService.encryptAndStorePrivateKey(posting_key);
+
                 state.isAuthenticated = true;
                 state.account = user;
                 state.username = user.name;
                 state.loginAuth = 'steem';
                 localStorage.setItem(appName + '-login_auth', 'steem');
                 localStorage.setItem(appName + '-auth_name', username);
-                localStorage.setItem(appName + '-encryptedpk', posting_key);
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -119,7 +156,7 @@ const createAuthStore = (): AuthStore => {
                 try {
                     const user = await AccountService.find(username) as unknown as IAccount;
                     state.isAuthenticated = true;
-                    state.loginAuth = loginAuth;
+                    state.loginAuth = loginAuth as 'steem' | 'keychain' | 'steemlogin';
                     state.account = user;
                     state.username = username;
                 } catch (error) {
@@ -135,13 +172,19 @@ const createAuthStore = (): AuthStore => {
         slogin,
         logout,
         handleLogin,
-        checkUser
+        checkUser,
+        validatePostingKey,
+        get username() {
+            return state.username;
+        },
+        get loginAuth() {
+            return state.loginAuth;
+        }
     };
 };
 
 const authStoreSymbol = Symbol('authStore');
 
-// Create a default store instance
 const defaultStore = createAuthStore();
 
 export const provideAuthStore = () => {
