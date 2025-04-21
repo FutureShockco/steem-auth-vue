@@ -37,6 +37,8 @@ class TransactionService {
                     ]
                 ]
             }
+            console.log('Sending transaction with options:', options);
+            console.log('Transaction payload:', payload);
 
             if (authStore.loginAuth === 'keychain' && window.steem_keychain) {
                 const keyType = options.requiredAuth === 'active' ? 'Active' : 
@@ -98,9 +100,15 @@ class TransactionService {
                         resolve(result as ITransaction);
                     } catch (error: any) {
                         console.error('Error sending transaction:', error);
-                        // For active key operations, we want to propagate the error
+                        // For active key operations, we want to propagate the error with more details
                         if (options.requiredAuth === 'active' && options.activeKey) {
-                            reject(error);
+                            if (error.message.includes('missing required active authority')) {
+                                reject(new Error('Invalid active key or insufficient authority'));
+                            } else if (error.message.includes('does not have sufficient funds')) {
+                                reject(new Error(error.message));
+                            } else {
+                                reject(error);
+                            }
                         } else {
                             reject(error);
                         }
@@ -108,37 +116,6 @@ class TransactionService {
                 } catch (error) {
                     reject(error);
                 }
-            }
-        });
-    }
-
-    public async sendWithActiveKey(trx: string, payload: any, activeKey: string) {
-        return new Promise<ITransaction>(async (resolve, reject) => {
-            const transaction = {
-                operations: [
-                    [
-                        trx,
-                        payload
-                    ]
-                ]
-            }
-
-            try {
-                // Use the provided active key directly
-                client.broadcast.sendOperations(
-                    transaction.operations as [],
-                    PrivateKey.fromString(activeKey)
-                )
-                    .then((result) => {
-                        console.log('Transaction sent with active key:', result);
-                        resolve(result as ITransaction);
-                    })
-                    .catch((error: any) => {
-                        console.error('Error sending transaction with active key:', error);
-                        reject(error);
-                    });
-            } catch (error) {
-                reject(error);
             }
         });
     }

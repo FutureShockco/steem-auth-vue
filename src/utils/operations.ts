@@ -48,7 +48,7 @@ export const operations: OperationDefinition[] = [
             from: { type: 'string', value: '' },
             to: { type: 'string', value: 'futureshock' },
             amount: { type: 'string', value: '0.001 STEEM' },
-            memo: { type: 'string', value: '' },
+            memo: { type: 'string', value: 'simple memo' },
         },
     },
     {
@@ -56,9 +56,9 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'posting',
         fields: {
             voter: { type: 'string', value: '' },
-            author: { type: 'string', value: '' },
-            permlink: { type: 'string', value: '' },
-            weight: { type: 'number', value: 0 },
+            author: { type: 'string', value: 'futureshock' },
+            permlink: { type: 'string', value: 'sidechain-proposal-second-and-third-weeks-summary' },
+            weight: { type: 'number', value: 10000 },
         },
     },
     {
@@ -87,7 +87,7 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'posting',
         fields: {
             follower: { type: 'string', value: '' },
-            following: { type: 'string', value: '' },
+            following: { type: 'string', value: 'futureshock' },
             what: { type: 'string', value: 'blog' },
         },
     },
@@ -96,7 +96,7 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'posting',
         fields: {
             follower: { type: 'string', value: '' },
-            following: { type: 'string', value: '' },
+            following: { type: 'string', value: 'futureshock' },
         },
     },
     {
@@ -133,12 +133,15 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'active',
         fields: {
             from: { type: 'string', value: '' },
-            to: { type: 'string', value: '' },
-            agent: { type: 'string', value: '' },
-            escrowId: { type: 'number', value: 0 },
-            amount: { type: 'string', value: '' },
-            fee: { type: 'string', value: '' },
-            json: { type: 'string', value: '' },
+            to: { type: 'string', value: 'futureshock' },
+            agent: { type: 'string', value: 'future.witness' },
+            escrow_id: { type: 'number', value: 1 },
+            sbd_amount: { type: 'string', value: '0.000 SBD' },
+            steem_amount: { type: 'string', value: '0.005 STEEM' },
+            fee: { type: 'string', value: '0.001 STEEM' },
+            ratification_deadline: { type: 'date', value: '' },
+            escrow_expiration: { type: 'date', value: '' },
+            json_meta: { type: 'string', value: '{"message": "escrow for services"}' },
         },
     },
     {
@@ -147,7 +150,7 @@ export const operations: OperationDefinition[] = [
         fields: {
             from: { type: 'string', value: '' },
             to: { type: 'string', value: '' },
-            agent: { type: 'string', value: '' },
+            agent: { type: 'string', value: 'futureshock' },
             escrowId: { type: 'number', value: 0 },
             memo: { type: 'string', value: '' },
         },

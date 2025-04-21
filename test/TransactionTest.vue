@@ -14,8 +14,14 @@
             <div class="form-group" v-for="(fieldDef, field, index) in operation.fields" :key="field">
               <div v-if="fieldDef.type === 'string' || fieldDef.type === 'number' || fieldDef.type === 'date'">
                 <label :for="field.toString() + index">{{ field }}</label>
-                <input :id="field.toString() + index" :type="fieldDef.type" v-model="fieldDef.value"
-                  @input="updateValue(operation.type, field, fieldDef.type, fieldDef.value)" />
+                <input 
+                  :id="field.toString() + index" 
+                  :type="fieldDef.type === 'date' ? 'datetime-local' : fieldDef.type" 
+                  :value="fieldDef.type === 'date' ? isoToInputFormat(fieldDef.value) : fieldDef.value"
+                  @input="fieldDef.type === 'date' 
+                    ? fieldDef.value = inputToIsoFormat(($event.target as HTMLInputElement).value)
+                    : fieldDef.value = ($event.target as HTMLInputElement).value"
+                />
               </div>
               <div v-else class="d-flex mx-1" :data-trigger-switch="field.toString() + index">
                 <div class="align-self-center">
@@ -32,15 +38,17 @@
             </div>
 
             <div v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)" class='send-button'>
-              Send</div>
+              Send
+            </div>
+
+            <div v-if="operationResults[operation.type]?.success" class="success-message">
+              {{ operationResults[operation.type].success }}
+            </div>
+            <div v-if="operationResults[operation.type]?.error" class="error-message">
+              {{ operationResults[operation.type].error }}
+            </div>
           </form>
         </div>
-      </div>
-      <div v-if="error" class="error-message">
-        {{ error }}
-      </div>
-      <div v-if="success" class="success-message">
-        {{ success }}
       </div>
     </div>
 
@@ -68,6 +76,7 @@ const success = ref('');
 const formValues = ref<Record<string, Record<string, any>>>({});
 const showActiveKeyModal = ref(false);
 const currentOperation = ref<OperationDefinition>({} as OperationDefinition);
+const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
 const customJsonData = ref({
   id: '',
   json: '',
@@ -75,13 +84,48 @@ const customJsonData = ref({
   required_posting_auths: ''
 });
 
+const formatDate = (date: Date): string => {
+  // Format date to match Steem's format: YYYY-MM-DDTHH:mm:ss
+  const pad = (num: number) => num.toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+const isoToInputFormat = (isoString: string | number | boolean): string => {
+  if (typeof isoString !== 'string') return '';
+  // Convert ISO string to format required by datetime-local input (YYYY-MM-DDTHH:mm)
+  return isoString.slice(0, 16);
+};
+
+const inputToIsoFormat = (inputString: string): string => {
+  // Convert datetime-local input format to ISO string
+  return new Date(inputString).toISOString().split('.')[0];
+};
+
+const dateToTimestamp = (date: Date): number => {
+  // Convert date to Unix timestamp (seconds since epoch)
+  return Math.floor(date.getTime() / 1000);
+};
+
 const updateValue = (operationType: string, field: string | number, fieldType: string, value: string | number | boolean) => {
   if (fieldType === 'boolean') {
     formValues.value[operationType][field] = Boolean(value);
   }
   else if (fieldType === 'number') {
     formValues.value[operationType][field] = Number(value);
-  } else {
+  } 
+  else if (fieldType === 'date') {
+    // Convert the date string to ISO format
+    const date = new Date(value as string);
+    formValues.value[operationType][field] = formatDate(date);
+  }
+  else {
     formValues.value[operationType][field] = value;
   }
 };
@@ -90,9 +134,11 @@ const updateFormValues = () => {
   operations.forEach(operation => {
     formValues.value[operation.type] = {};
     Object.keys(operation.fields).forEach(field => {
-      if (field === 'author' || field === 'voter' || field === 'from' || field === 'creator' || field === 'follower') {
-        operation.fields[field].value = authStore.state.username;
-        formValues.value[operation.type][field] = authStore.state.username;
+      if (field === 'author' || field === 'voter' || field === 'from' || field === 'to' || field === 'creator' || field === 'follower' || field === 'parent_author') {
+        if (!operation.fields[field].value) {
+          operation.fields[field].value = authStore.state.username;
+          formValues.value[operation.type][field] = authStore.state.username;
+        }
       }
       else
         formValues.value[operation.type][field] = '';
@@ -125,18 +171,16 @@ const closeActiveKeyModal = () => {
 };
 
 const handleSuccess = (result: any) => {
-  console.log('Parent: Handling success', result);
-  showSuccess(`Transaction sent successfully! Transaction ID: ${result.id}`);
-};
-
-const showSuccess = (message: string) => {
-  success.value = message;
+  if (currentOperation.value) {
+    operationResults.value[currentOperation.value.type] = {
+      success: `Transaction sent successfully! Transaction ID: ${result.id}`
+    };
+  }
 };
 
 const send = async (operation: OperationDefinition) => {
   loading.value = true;
-  error.value = '';
-  success.value = '';
+  operationResults.value[operation.type] = {};
   const tx = {} as any;
   Object.keys(operation.fields).forEach((key) => {
     tx[key] = operation.fields[key].value;
@@ -148,12 +192,18 @@ const send = async (operation: OperationDefinition) => {
 
     // Handle different response formats based on auth method
     if (authStore.loginAuth === 'steem') {
-      success.value = `Transaction sent successfully! Transaction ID: ${response.id}`;
+      operationResults.value[operation.type] = {
+        success: `Transaction sent successfully! Transaction ID: ${response.id}`
+      };
     } else {
-      success.value = `Transaction sent successfully! Transaction ID: ${response.result.id}`;
+      operationResults.value[operation.type] = {
+        success: `Transaction sent successfully! Transaction ID: ${response.result.id}`
+      };
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to send transaction';
+    operationResults.value[operation.type] = {
+      error: err instanceof Error ? err.message : 'Failed to send transaction'
+    };
   } finally {
     loading.value = false;
   }
@@ -233,19 +283,21 @@ const send = async (operation: OperationDefinition) => {
   cursor: not-allowed;
 }
 
-.error-message {
-  color: #d32f2f;
-  padding: 10px;
-  margin-top: 20px;
-  background: #ffebee;
-  border-radius: 4px;
-}
-
 .success-message {
   color: #388e3c;
   padding: 10px;
-  margin-top: 20px;
+  margin-top: 10px;
   background: #e8f5e9;
   border-radius: 4px;
+  font-size: 14px;
+}
+
+.error-message {
+  color: #d32f2f;
+  padding: 10px;
+  margin-top: 10px;
+  background: #ffebee;
+  border-radius: 4px;
+  font-size: 14px;
 }
 </style>
