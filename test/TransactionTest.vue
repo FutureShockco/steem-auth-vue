@@ -87,12 +87,7 @@ const currentOperation = ref<ExtendedOperation>({
   requiredAuth: 'active'
 } as ExtendedOperation);
 const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
-const customJsonData = ref({
-  id: '',
-  json: '',
-  required_auths: '',
-  required_posting_auths: ''
-});
+
 
 const formatDate = (date: Date): string => {
   // Format date to match Steem's format: YYYY-MM-DDTHH:mm:ss
