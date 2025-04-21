@@ -105,7 +105,7 @@ export const operations: OperationDefinition[] = [
         fields: {
             requiredAuth: { type: 'string', value: '' },
             id: { type: 'string', value: '' },
-            json: { type: 'string', value: '' },
+            json: { type: 'string', value: '{"test": "test"}' },
         },
     },
     {

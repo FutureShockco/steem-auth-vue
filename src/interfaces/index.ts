@@ -4,9 +4,15 @@ export interface IAccount {
   username: string;
   publicKey: string;
   vote: string;
+  active: {
+    weight_threshold: number;
+    account_auths: [string, number][];
+    key_auths: [string, number][];
+  };
 }
 
 export interface ITransaction {
+  result: any;
   block_num: number;
   expiration: string;
   expired: boolean;

@@ -9,7 +9,6 @@
 <script setup lang="ts">
 import SteemAuth from '../src/components/SteemAuth.vue';
 import TransactionTest from './TransactionTest.vue';
-import './styles/steem-auth-custom.css';
 </script>
 
 <style>
@@ -28,5 +27,4 @@ import './styles/steem-auth-custom.css';
     color: #2c3e50;
     margin-top: 60px;
 }
-
 </style> 

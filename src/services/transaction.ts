@@ -89,18 +89,22 @@ class TransactionService {
                         privateKey = await EncryptionService.decryptPrivateKey();
                     }
                     
-                    client.broadcast.sendOperations(
-                        transaction.operations as [],
-                        PrivateKey.fromString(privateKey)
-                    )
-                        .then((result) => {
-                            console.log('Transaction sent:', result);
-                            resolve(result as ITransaction);
-                        })
-                        .catch((error: any) => {
-                            console.error('Error sending transaction:', error);
+                    try {
+                        const result = await client.broadcast.sendOperations(
+                            transaction.operations as [],
+                            PrivateKey.fromString(privateKey)
+                        );
+                        console.log('Transaction sent:', result);
+                        resolve(result as ITransaction);
+                    } catch (error: any) {
+                        console.error('Error sending transaction:', error);
+                        // For active key operations, we want to propagate the error
+                        if (options.requiredAuth === 'active' && options.activeKey) {
                             reject(error);
-                        });
+                        } else {
+                            reject(error);
+                        }
+                    }
                 } catch (error) {
                     reject(error);
                 }

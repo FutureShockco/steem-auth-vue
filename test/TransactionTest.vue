@@ -8,14 +8,14 @@
 
     <div v-else class="transaction-options">
       <div class="transaction-type" v-for="operation in operations" :key="operation.type">
-        <div >
+        <div>
           <h2>{{ operation.type }} operation (require:{{ operation.requiredAuth }} key)</h2>
-          <form @submit.prevent="handleOperation(operation)" >
+          <form @submit.prevent="handleOperation(operation)">
             <div class="form-group" v-for="(fieldDef, field, index) in operation.fields" :key="field">
               <div v-if="fieldDef.type === 'string' || fieldDef.type === 'number' || fieldDef.type === 'date'">
                 <label :for="field.toString() + index">{{ field }}</label>
-                <input :id="field.toString() + index" :type="fieldDef.type"
-                  v-model="fieldDef.value" @input="updateValue(operation.type, field, fieldDef.type, fieldDef.value)" />
+                <input :id="field.toString() + index" :type="fieldDef.type" v-model="fieldDef.value"
+                  @input="updateValue(operation.type, field, fieldDef.type, fieldDef.value)" />
               </div>
               <div v-else class="d-flex mx-1" :data-trigger-switch="field.toString() + index">
                 <div class="align-self-center">
@@ -31,37 +31,11 @@
               </div>
             </div>
 
-            <div v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)"
-              class='send-button'>
+            <div v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)" class='send-button'>
               Send</div>
           </form>
         </div>
       </div>
-      <div class="transaction-type">
-        <h3>Custom JSON Transaction</h3>
-        <div class="form-group">
-          <label for="id">ID</label>
-          <input id="id" v-model="customJsonData.id" type="text" placeholder="Transaction ID (e.g., 'app-name')" />
-        </div>
-        <div class="form-group">
-          <label for="json">JSON Data</label>
-          <textarea id="json" v-model="customJsonData.json" placeholder="Enter JSON data" rows="10"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="requiredAuths">Required Auths</label>
-          <input id="requiredAuths" v-model="customJsonData.required_auths" type="text"
-            placeholder="Comma-separated usernames (optional)" />
-        </div>
-        <div class="form-group">
-          <label for="requiredPostingAuths">Required Posting Auths</label>
-          <input id="requiredPostingAuths" v-model="customJsonData.required_posting_auths" type="text"
-            placeholder="Comma-separated usernames (optional)" />
-        </div>
-        <button @click="sendCustomJson" :disabled="!canSendCustomJson || loading" class="send-button">
-          {{ loading ? 'Sending...' : 'Send Custom JSON' }}
-        </button>
-      </div>
-
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
@@ -70,18 +44,18 @@
       </div>
     </div>
 
-    <ActiveKeyModal
-      v-if="showActiveKeyModal"
-      :show="showActiveKeyModal"
+    <ActiveKeyModal 
+      v-if="showActiveKeyModal" 
+      :show="showActiveKeyModal" 
       :operation="currentOperation"
-      @close="closeActiveKeyModal"
-      @submit="handleActiveKeySubmit"
+      @close="closeActiveKeyModal" 
+      @success="handleSuccess" 
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useAuthStore } from '../src/stores/auth';
 import TransactionService from '../src/services/transaction';
 import { operations, type OperationDefinition } from '../src/utils/operations';
@@ -94,56 +68,46 @@ const success = ref('');
 const formValues = ref<Record<string, Record<string, any>>>({});
 const showActiveKeyModal = ref(false);
 const currentOperation = ref<OperationDefinition>({} as OperationDefinition);
-
-operations.forEach(operation => {
-  formValues.value[operation.type] = {};
-  console.log(operation.fields)
-  Object.keys(operation.fields).forEach(field => {
-    if (field === 'author' || field === 'voter' || field === 'from' || field === 'creator' || field === 'follower') {
-      operation.fields[field].value = authStore.state.username;
-      formValues.value[operation.type][field] = authStore.state.username;
-    }
-    else
-      formValues.value[operation.type][field] = '';
-  });
-});
-
-// Custom JSON data
 const customJsonData = ref({
-  id: 'steem-auth-test',
-  json: '{"test": "test"}',
+  id: '',
+  json: '',
   required_auths: '',
   required_posting_auths: ''
 });
 
 const updateValue = (operationType: string, field: string | number, fieldType: string, value: string | number | boolean) => {
   if (fieldType === 'boolean') {
-    formValues.value[operationType][field] = Boolean(value); // Convert to number
+    formValues.value[operationType][field] = Boolean(value);
   }
   else if (fieldType === 'number') {
-    formValues.value[operationType][field] = Number(value); // Convert to number
+    formValues.value[operationType][field] = Number(value);
   } else {
-    formValues.value[operationType][field] = value; // Keep as string
+    formValues.value[operationType][field] = value;
   }
 };
+
+const updateFormValues = () => {
+  operations.forEach(operation => {
+    formValues.value[operation.type] = {};
+    Object.keys(operation.fields).forEach(field => {
+      if (field === 'author' || field === 'voter' || field === 'from' || field === 'creator' || field === 'follower') {
+        operation.fields[field].value = authStore.state.username;
+        formValues.value[operation.type][field] = authStore.state.username;
+      }
+      else
+        formValues.value[operation.type][field] = '';
+    });
+  });
+};
+
 // Watch for account changes
 watch(() => authStore.state.account, (newAccount) => {
   if (newAccount) {
-    customJsonData.value.required_posting_auths = newAccount.name;
+    updateFormValues();
   }
 }, { immediate: true });
 
-// Computed property for validation
-const canSendCustomJson = computed(() => {
-  try {
-    if (!customJsonData.value.id || !customJsonData.value.json) return false;
-    // Validate JSON
-    JSON.parse(customJsonData.value.json);
-    return true;
-  } catch {
-    return false;
-  }
-});
+updateFormValues();
 
 const handleOperation = (operation: OperationDefinition) => {
   if (operation.requiredAuth === 'active' && authStore.loginAuth === 'steem') {
@@ -155,83 +119,46 @@ const handleOperation = (operation: OperationDefinition) => {
 };
 
 const closeActiveKeyModal = () => {
+  console.log('Parent: Closing active key modal');
   showActiveKeyModal.value = false;
   currentOperation.value = {} as OperationDefinition;
 };
 
-const handleActiveKeySubmit = async (activeKey: string) => {
-  if (!currentOperation.value) return;
+const handleSuccess = (result: any) => {
+  console.log('Parent: Handling success', result);
+  showSuccess(`Transaction sent successfully! Transaction ID: ${result.id}`);
+};
 
-  const tx = {} as any;
-  Object.keys(currentOperation.value.fields).forEach((key) => {
-    tx[key] = currentOperation.value!.fields[key].value;
-  });
-
-  try {
-    const response = await TransactionService.send(currentOperation.value.type, tx, {
-      requiredAuth: 'active',
-      activeKey: activeKey
-    });
-    success.value = response;
-    closeActiveKeyModal();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to send transaction';
-  }
+const showSuccess = (message: string) => {
+  success.value = message;
 };
 
 const send = async (operation: OperationDefinition) => {
+  loading.value = true;
+  error.value = '';
+  success.value = '';
   const tx = {} as any;
   Object.keys(operation.fields).forEach((key) => {
     tx[key] = operation.fields[key].value;
   });
-  const response = await TransactionService.send(operation.type, tx, {
-    requiredAuth: operation.requiredAuth
-  });
-  success.value = response;
-  console.log(response);
-};
-
-// Transaction method
-const sendCustomJson = async () => {
-  loading.value = true;
-  error.value = '';
-  success.value = '';
-
   try {
-    // Parse JSON to validate it's valid
-    const jsonData = JSON.parse(customJsonData.value.json);
-
-    // Process required auths
-    const requiredAuths = customJsonData.value.required_auths
-      ? customJsonData.value.required_auths.split(',').map(auth => auth.trim())
-      : [];
-
-    // Process required posting auths
-    const requiredPostingAuths = customJsonData.value.required_posting_auths
-      ? customJsonData.value.required_posting_auths.split(',').map(auth => auth.trim())
-      : [];
-
-    const result = await TransactionService.send('custom_json', {
-      id: customJsonData.value.id,
-      json: JSON.stringify(jsonData),
-      required_auths: requiredAuths,
-      required_posting_auths: requiredPostingAuths
+    const response = await TransactionService.send(operation.type, tx, {
+      requiredAuth: operation.requiredAuth
     });
 
-    // Handle different response formats
+    // Handle different response formats based on auth method
     if (authStore.loginAuth === 'steem') {
-      success.value = `Custom JSON sent successfully! Transaction ID: ${result.id}`;
+      success.value = `Transaction sent successfully! Transaction ID: ${response.id}`;
     } else {
-      success.value = `Custom JSON sent successfully! Transaction ID: ${result.result.id}`;
+      success.value = `Transaction sent successfully! Transaction ID: ${response.result.id}`;
     }
-    console.log('Custom JSON result:', result);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to send custom JSON';
-    console.error('Custom JSON error:', err);
+    error.value = err instanceof Error ? err.message : 'Failed to send transaction';
   } finally {
     loading.value = false;
   }
 };
+
 </script>
 
 <style scoped>

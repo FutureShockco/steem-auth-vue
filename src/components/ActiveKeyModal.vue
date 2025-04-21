@@ -37,6 +37,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { type OperationDefinition } from '../utils/operations';
+import { PrivateKey } from 'dsteem';
+import { useAuthStore } from '../stores/auth';
+import client from '../helpers/client';
+import TransactionService from '../services/transaction';
 
 const props = defineProps<{
   show: boolean;
@@ -45,30 +49,94 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'submit', activeKey: string): void;
+  (e: 'submit', activeKey: string): Promise<void>;
+  (e: 'success', result: any): void;
 }>();
 
 const activeKey = ref('');
 const error = ref('');
 const loading = ref(false);
+const authStore = useAuthStore();
+
+const verifyActiveKey = (privateKey: string): boolean => {
+  try {
+    const key = PrivateKey.fromString(privateKey);
+    const publicKey = key.createPublic().toString();
+    return publicKey === authStore.state.account?.active.key_auths[0][0];
+  } catch (err) {
+    return false;
+  }
+};
 
 const closeModal = () => {
+  console.log('Closing modal...');
   activeKey.value = '';
   error.value = '';
+  loading.value = false;
   emit('close');
 };
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!activeKey.value) {
     error.value = 'Active key is required';
     return;
   }
   
   loading.value = true;
-  emit('submit', activeKey.value);
-  activeKey.value = '';
   error.value = '';
-  loading.value = false;
+  
+  try {
+    // Verify the active key by deriving the public key
+    if (!verifyActiveKey(activeKey.value)) {
+      error.value = 'Invalid active key';
+      loading.value = false;
+      return;
+    }
+
+    // Build the transaction payload
+    const tx = {} as any;
+    Object.keys(props.operation.fields).forEach((key) => {
+      tx[key] = props.operation.fields[key].value;
+    });
+
+    // Send the transaction
+    const result = await TransactionService.send(
+      props.operation.type,
+      tx,
+      { requiredAuth: 'active', activeKey: activeKey.value }
+    );
+
+    // If we get here, the transaction was successful
+    console.log('Transaction successful, emitting success and closing modal');
+    emit('success', result);
+    closeModal();
+  } catch (err: any) {
+    console.error('Transaction error:', err);
+    
+    // Handle RPCError format
+    if (err.name === 'RPCError') {
+      if (err.message.includes('does not have sufficient funds')) {
+        // Get the actual transfer amount from the operation
+        const amount = props.operation.fields.amount.value as string;
+        const [amountValue, currency] = amount.split(' ');
+        
+        error.value = `Insufficient funds. Required: ${amountValue} ${currency}, Available: 0 ${currency}`;
+      } else if (err.message.includes('missing required posting authority')) {
+        error.value = 'Missing required posting authority';
+      } else if (err.message.includes('invalid_scope')) {
+        error.value = 'Invalid scope for this operation';
+      } else {
+        // For other RPC errors, try to extract a user-friendly message
+        const message = err.message.split(':')[1]?.trim() || err.message;
+        error.value = message;
+      }
+    } else {
+      // Handle non-RPC errors
+      error.value = err instanceof Error ? err.message : 'An unexpected error occurred';
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 
