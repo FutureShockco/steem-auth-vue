@@ -52,15 +52,14 @@
                                 <span v-if="usernameError" class="error-text">{{ usernameError }}</span>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group" v-if="!useKeychain">
                                 <label for="posting-key">Posting Key</label>
                                 <input
                                     id="posting-key"
                                     v-model="postingKey"
                                     type="password"
-                                    :required="!useKeychain"
+                                    required
                                     placeholder="Enter your posting key"
-                                    :disabled="useKeychain"
                                     :class="{ 'error': postingKeyError }"
                                 />
                                 <span v-if="postingKeyError" class="error-text">{{ postingKeyError }}</span>
@@ -227,21 +226,38 @@ onMounted(() => {
 <style scoped>
 .steem-auth {
     display: inline-block;
+    --steem-auth-primary-color: #1a73e8;
+    --steem-auth-primary-hover: #1557b0;
+    --steem-auth-text-color: #ffffff;
+    --steem-auth-secondary-color: #5f6368;
+    --steem-auth-background: white;
+    --steem-auth-border-color: #e0e0e0;
+    --steem-auth-error-color: #d93025;
+    --steem-auth-success-color: #34a853;
+    --steem-auth-button-padding: 8px 16px;
+    --steem-auth-button-radius: 4px;
+    --steem-auth-button-font-size: 14px;
+    --steem-auth-input-padding: 8px 12px;
+    --steem-auth-input-radius: 4px;
+    --steem-auth-input-font-size: 14px;
+    --steem-auth-modal-width: 400px;
+    --steem-auth-modal-radius: 8px;
+    --steem-auth-modal-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .auth-trigger {
-    padding: 8px 16px;
-    background-color: #1a73e8;
+    padding: var(--steem-auth-button-padding);
+    background-color: var(--steem-auth-primary-color);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--steem-auth-button-radius);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--steem-auth-button-font-size);
     transition: all 0.2s ease;
 }
 
 .auth-trigger:hover {
-    background-color: #1557b0;
+    background-color: var(--steem-auth-primary-hover);
     transform: translateY(-1px);
 }
 
@@ -291,11 +307,11 @@ onMounted(() => {
 }
 
 .modal-content {
-    background: white;
-    border-radius: 8px;
+    background: var(--steem-auth-background);
+    border-radius: var(--steem-auth-modal-radius);
     width: 90%;
-    max-width: 400px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: var(--steem-auth-modal-width);
+    box-shadow: var(--steem-auth-modal-shadow);
     animation: modalFadeIn 0.3s ease;
 }
 
@@ -409,26 +425,26 @@ label {
 
 input[type="text"],
 input[type="password"] {
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-size: 14px;
+    padding: var(--steem-auth-input-padding);
+    border: 1px solid var(--steem-auth-border-color);
+    border-radius: var(--steem-auth-input-radius);
+    font-size: var(--steem-auth-input-font-size);
     transition: all 0.2s ease;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus {
     outline: none;
-    border-color: #1a73e8;
+    border-color: var(--steem-auth-primary-color);
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
 input.error {
-    border-color: #d93025;
+    border-color: var(--steem-auth-error-color);
 }
 
 .error-text {
-    color: #d93025;
+    color: var(--steem-auth-error-color);
     font-size: 12px;
     margin-top: 4px;
 }
@@ -487,21 +503,21 @@ input.error {
 }
 
 .keychain-status.available {
-    color: #34a853;
+    color: var(--steem-auth-success-color);
 }
 
 .keychain-status.unavailable {
-    color: #d93025;
+    color: var(--steem-auth-error-color);
 }
 
 .submit-button {
-    padding: 12px;
-    background-color: #1a73e8;
+    padding: var(--steem-auth-button-padding);
+    background-color: var(--steem-auth-primary-color);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--steem-auth-button-radius);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--steem-auth-button-font-size);
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -511,7 +527,7 @@ input.error {
 }
 
 .submit-button:hover {
-    background-color: #1557b0;
+    background-color: var(--steem-auth-primary-hover);
 }
 
 .submit-button:disabled {

@@ -1,0 +1,106 @@
+/* Custom styles for SteemAuth component */
+.steem-auth {
+    --steem-auth-primary-color: #6c5ce7;
+    --steem-auth-primary-hover: #5649c0;
+    --steem-auth-text-color: #f8f9fa;
+    --steem-auth-secondary-color: #adb5bd;
+    --steem-auth-background: #212529;
+    --steem-auth-border-color: #495057;
+    --steem-auth-error-color: #ff6b6b;
+    --steem-auth-success-color: #51cf66;
+    --steem-auth-button-padding: 10px 20px;
+    --steem-auth-button-radius: 6px;
+    --steem-auth-button-font-size: 16px;
+    --steem-auth-input-padding: 10px 15px;
+    --steem-auth-input-radius: 6px;
+    --steem-auth-input-font-size: 16px;
+    --steem-auth-modal-width: 450px;
+    --steem-auth-modal-radius: 12px;
+    --steem-auth-modal-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Additional custom styles for the modal overlay */
+.steem-auth .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Custom styles for the form inputs */
+.steem-auth input[type="text"],
+.steem-auth input[type="password"] {
+    background-color: #343a40;
+    color: var(--steem-auth-text-color);
+}
+
+.steem-auth input[type="text"]:focus,
+.steem-auth input[type="password"]:focus {
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
+}
+
+/* Custom styles for the buttons */
+.steem-auth .auth-trigger,
+.steem-auth .submit-button,
+.steem-auth .steemlogin-button {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* Custom styles for the modal header */
+.steem-auth .modal-header {
+    background-color: #343a40 !important;
+    border-bottom: 2px solid var(--steem-auth-border-color);
+    padding: 16px 24px !important;
+}
+
+.steem-auth .modal-header h2 {
+    color: var(--steem-auth-text-color) !important;
+    margin: 0 !important;
+    font-size: 20px !important;
+    font-weight: 500 !important;
+}
+
+.steem-auth .modal-header .close-button {
+    color: var(--steem-auth-text-color) !important;
+    background: none !important;
+    border: none !important;
+    font-size: 24px !important;
+    padding: 4px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+}
+
+/* Custom styles for the divider */
+.steem-auth .divider {
+    color: var(--steem-auth-secondary-color);
+}
+
+.steem-auth .divider::before,
+.steem-auth .divider::after {
+    border-bottom: 2px solid var(--steem-auth-border-color);
+}
+
+/* Custom styles for the error message */
+.steem-auth .error-message {
+    background-color: rgba(255, 107, 107, 0.1);
+    border: 1px solid var(--steem-auth-error-color);
+}
+
+/* Custom styles for the checkbox */
+.steem-auth .checkmark {
+    border-color: var(--steem-auth-border-color);
+}
+
+.steem-auth .checkbox-container input[type="checkbox"]:checked + .checkmark {
+    background-color: var(--steem-auth-primary-color);
+    border-color: var(--steem-auth-primary-color);
+}
+
+/* Custom styles for the logout button */
+.steem-auth .logout-button {
+    background-color: #343a40;
+    color: var(--steem-auth-text-color);
+}
+
+.steem-auth .logout-button:hover {
+    background-color: #495057;
+} 
