@@ -67,7 +67,13 @@ import { ref, watch } from 'vue';
 import { useAuthStore } from '../src/stores/auth';
 import TransactionService from '../src/services/transaction';
 import { operations, type OperationDefinition } from '../src/utils/operations';
+import { type OperationDefinition as EchelonOperationDefinition } from '../src/utils/echelon';
 import ActiveKeyModal from '../src/components/ActiveKeyModal.vue';
+
+// Define the extended operation type that includes requiredAuth
+type ExtendedOperation = EchelonOperationDefinition & {
+  requiredAuth: 'active' | 'posting';
+};
 
 const authStore = useAuthStore();
 const loading = ref(false);
@@ -75,7 +81,11 @@ const error = ref('');
 const success = ref('');
 const formValues = ref<Record<string, Record<string, any>>>({});
 const showActiveKeyModal = ref(false);
-const currentOperation = ref<OperationDefinition>({} as OperationDefinition);
+const currentOperation = ref<ExtendedOperation>({
+  type: 'approve_node',
+  fields: {},
+  requiredAuth: 'active'
+} as ExtendedOperation);
 const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
 const customJsonData = ref({
   id: '',
@@ -157,7 +167,12 @@ updateFormValues();
 
 const handleOperation = (operation: OperationDefinition) => {
   if (operation.requiredAuth === 'active' && authStore.loginAuth === 'steem') {
-    currentOperation.value = operation;
+    // Convert the operation to the expected type
+    currentOperation.value = {
+      type: operation.type as any, // We know this is safe because we're only using it for display
+      fields: operation.fields,
+      requiredAuth: operation.requiredAuth as 'active' | 'posting'
+    } as ExtendedOperation;
     showActiveKeyModal.value = true;
   } else {
     send(operation);
@@ -167,7 +182,11 @@ const handleOperation = (operation: OperationDefinition) => {
 const closeActiveKeyModal = () => {
   console.log('Parent: Closing active key modal');
   showActiveKeyModal.value = false;
-  currentOperation.value = {} as OperationDefinition;
+  currentOperation.value = {
+    type: 'approve_node',
+    fields: {},
+    requiredAuth: 'active'
+  } as ExtendedOperation;
 };
 
 const handleSuccess = (result: any) => {
