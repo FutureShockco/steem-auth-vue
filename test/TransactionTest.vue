@@ -1,6 +1,6 @@
 <template>
   <div class="transaction-test">
-    <h2>Transaction Test</h2>
+    <h2>Steem Transactions Test</h2>
 
     <div v-if="!authStore.state.isAuthenticated" class="not-authenticated">
       <p>Please log in first to test transactions</p>

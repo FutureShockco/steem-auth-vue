@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type OperationDefinition } from '../utils/operations';
+import { type OperationDefinition } from '../utils/echelon';
 import { PrivateKey } from 'dsteem';
 import { useAuthStore } from '../stores/auth';
 import client from '../helpers/client';
@@ -44,7 +44,7 @@ import TransactionService from '../services/transaction';
 
 const props = defineProps<{
   show: boolean;
-  operation: OperationDefinition;
+  operation: OperationDefinition & { requiredAuth: 'active' | 'posting' };
 }>();
 
 const emit = defineEmits<{

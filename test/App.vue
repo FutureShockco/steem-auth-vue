@@ -11,14 +11,37 @@
       </div>
     </nav>
     <div class="content">
-      <TransactionTest />
+      <div class="tabs">
+        <button 
+          class="tab-button" 
+          :class="{ active: activeTab === 'steem' }"
+          @click="activeTab = 'steem'"
+        >
+          Steem Transactions
+        </button>
+        <button 
+          class="tab-button" 
+          :class="{ active: activeTab === 'echelon' }"
+          @click="activeTab = 'echelon'"
+        >
+          Echelon Transactions
+        </button>
+      </div>
+      <div class="tab-content">
+        <TransactionTest v-if="activeTab === 'steem'" />
+        <EchelonTest v-if="activeTab === 'echelon'" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import SteemAuth from '../src/components/SteemAuth.vue';
 import TransactionTest from './TransactionTest.vue';
+import EchelonTest from './EchelonTest.vue';
+
+const activeTab = ref('steem');
 </script>
 
 <style>
@@ -59,6 +82,39 @@ import TransactionTest from './TransactionTest.vue';
 }
 
 .content {
+  padding: 2rem;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #e0e0e0;
+}
+
+.tab-button.active {
+  background: #1a73e8;
+  color: white;
+}
+
+.tab-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 2rem;
 }
 
