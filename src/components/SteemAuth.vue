@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import sc from '../helpers/steemlogin';
 
@@ -166,61 +166,9 @@ const useKeychain = ref<boolean>(false);
 const hasKeychain = ref<boolean>(false);
 const loading = ref<boolean>(false);
 const error = ref<string>('');
-const keychainStatus = ref<'checking' | 'available' | 'unavailable'>('checking');
 const usernameError = ref<string>('');
 const postingKeyError = ref<string>('');
 const isDarkTheme = ref<boolean>(props.defaultDarkMode);
-
-const keychainStatusText = computed(() => {
-    switch (keychainStatus.value) {
-        case 'checking': return 'Checking for Keychain...';
-        case 'available': return 'Keychain available';
-        default: return 'Keychain not detected';
-    }
-});
-
-// Theme management
-const THEME_STORAGE_KEY = 'steem-auth-theme';
-
-const applyTheme = (isDark: boolean) => {
-    if (isDark) {
-        document.documentElement.classList.add('dark-theme');
-    } else {
-        document.documentElement.classList.remove('dark-theme');
-    }
-    localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-    emit('theme-change', isDark);
-};
-
-const toggleTheme = () => {
-    isDarkTheme.value = !isDarkTheme.value;
-    applyTheme(isDarkTheme.value);
-};
-
-const initTheme = () => {
-    // Check if theme is stored in localStorage
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme) {
-        isDarkTheme.value = storedTheme === 'dark';
-    } else if (props.defaultDarkMode) {
-        isDarkTheme.value = true;
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        // Use system preference if no stored theme
-        isDarkTheme.value = true;
-    }
-    
-    // Apply the theme
-    applyTheme(isDarkTheme.value);
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        // Only auto-change if user hasn't manually set a theme
-        if (!localStorage.getItem(THEME_STORAGE_KEY)) {
-            isDarkTheme.value = e.matches;
-            applyTheme(isDarkTheme.value);
-        }
-    });
-};
 
 const checkKeychain = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -299,11 +247,9 @@ onMounted(() => {
     // Only check for keychain if it's enabled
     if (props.enableKeychain) {
         hasKeychain.value = checkKeychain();
-        keychainStatus.value = hasKeychain.value ? 'available' : 'unavailable';
         
         setTimeout(() => {
             hasKeychain.value = checkKeychain();
-            keychainStatus.value = hasKeychain.value ? 'available' : 'unavailable';
         }, 1000);
     }
 
@@ -314,4 +260,47 @@ onMounted(() => {
     
     store.checkUser();
 });
+
+// Theme management
+const THEME_STORAGE_KEY = 'steem-auth-theme';
+
+const applyTheme = (isDark: boolean) => {
+    if (isDark) {
+        document.documentElement.classList.add('dark-theme');
+    } else {
+        document.documentElement.classList.remove('dark-theme');
+    }
+    localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+    emit('theme-change', isDark);
+};
+
+const toggleTheme = () => {
+    isDarkTheme.value = !isDarkTheme.value;
+    applyTheme(isDarkTheme.value);
+};
+
+const initTheme = () => {
+    // Check if theme is stored in localStorage
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (storedTheme) {
+        isDarkTheme.value = storedTheme === 'dark';
+    } else if (props.defaultDarkMode) {
+        isDarkTheme.value = true;
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // Use system preference if no stored theme
+        isDarkTheme.value = true;
+    }
+    
+    // Apply the theme
+    applyTheme(isDarkTheme.value);
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        // Only auto-change if user hasn't manually set a theme
+        if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+            isDarkTheme.value = e.matches;
+            applyTheme(isDarkTheme.value);
+        }
+    });
+};
 </script> 
