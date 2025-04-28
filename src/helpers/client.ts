@@ -1,5 +1,5 @@
-import { Client } from 'dsteem'
+import * as dsteem from 'dsteem'
 
-const client = new Client('https://api.steemit.com')
+const client = new dsteem.Client('https://api.justyy.com')
 
 export default client;

@@ -1,13 +1,15 @@
 import { createApp } from 'vue';
 import App from './App.vue';
-import { provideAuthStore } from '../src/stores/auth';
-import './styles/steem-auth-custom.css';
+// Import from the built distribution files
+//@ts-ignore
+import { useAuthStore } from '../dist/steem-auth-vue.es.js';
+//import './styles/steem-auth-custom.css';
 
 // Create the app instance
 const app = createApp(App);
 
 // Provide the auth store
-const store = provideAuthStore();
+useAuthStore();
 
 // Mount the app
 app.mount('#app'); 

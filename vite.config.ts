@@ -6,9 +6,13 @@ import dts from 'vite-plugin-dts'
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
-        vue(),
+        vue({
+            // Exclude test directory from Vue processing
+            exclude: [/test\//]
+        }),
         dts({
             insertTypesEntry: true,
+            exclude: ['test/**', '**/node_modules/**'],
         }),
     ],
     build: {
@@ -27,12 +31,20 @@ export default defineConfig({
                     dsteem: 'dsteem'
                 }
             }
-        }
+        },
+        // Explicitly exclude test directory by setting outDir to dist
+        outDir: path.resolve(__dirname, 'dist'),
+        emptyOutDir: true,
+        sourcemap: true,
     },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
+    },
+    // Exclude test directory from file system watching
+    optimizeDeps: {
+        exclude: ['test/**/*']
     },
     server: {
         port: 2980,

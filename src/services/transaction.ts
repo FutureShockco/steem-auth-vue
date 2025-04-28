@@ -56,6 +56,16 @@ class TransactionService {
             }
             else if (authStore.loginAuth === 'steemlogin') {
                 try {
+                    // For active key operations, directly use the sign URL approach
+                    if (options.requiredAuth === 'active') {
+                        console.log('SteemLogin with active key operation - opening sign URL');
+                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
+                        console.log('Opened SteemLogin sign URL:', signUrl);
+                        reject(new Error('Please sign the transaction in the new window'));
+                        return;
+                    }
+
+                    // For posting key operations, try the standard broadcast
                     const result = await steemlogin.broadcast(transaction.operations);
                     console.log('Transaction broadcasted:', result);
                     resolve(result);
@@ -63,19 +73,8 @@ class TransactionService {
                     console.error('Error broadcasting transaction:', error);
                     if (error.error === 'invalid_scope') {
                         // Construct the SteemLogin sign URL
-                        const baseUrl = 'https://steemlogin.com/sign/';
-                        const params = new URLSearchParams();
-                        
-                        // Add all payload fields as URL parameters
-                        Object.entries(payload).forEach(([key, value]) => {
-                            if (value !== undefined && value !== null) {
-                                params.append(key, String(value));
-                            }
-                        });
-                        
-                        // Open the sign URL in a new window
-                        const signUrl = `${baseUrl}${trx}?${params.toString()}`;
-                        window.open(signUrl, '_blank');
+                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
+                        console.log('Opened SteemLogin sign URL after error:', signUrl);
                         reject(new Error('Please sign the transaction in the new window'));
                         return;
                     }
@@ -86,24 +85,41 @@ class TransactionService {
                 try {
                     let privateKey: string;
                     if (options.requiredAuth === 'active' && options.activeKey) {
+                        console.log('Using provided active key for transaction');
                         privateKey = options.activeKey;
                     } else {
+                        console.log('Using stored key for transaction');
                         privateKey = await EncryptionService.decryptPrivateKey();
                     }
                     
                     try {
+                        console.log('Sending transaction operation:', trx);
+                        console.log('With auth type:', options.requiredAuth);
+                        
+                        // For debugging, derive and log the public key
+                        if (options.requiredAuth === 'active') {
+                            try {
+                                const key = PrivateKey.fromString(privateKey);
+                                const publicKey = key.createPublic().toString();
+                                console.log('Public key derived from provided private key:', publicKey);
+                            } catch (keyErr) {
+                                console.error('Error deriving public key:', keyErr);
+                            }
+                        }
+                        
                         const result = await client.broadcast.sendOperations(
                             transaction.operations as [],
                             PrivateKey.fromString(privateKey)
                         );
-                        console.log('Transaction sent:', result);
+                        console.log('Transaction sent successfully:', result);
                         resolve(result as ITransaction);
                     } catch (error: any) {
                         console.error('Error sending transaction:', error);
                         // For active key operations, we want to propagate the error with more details
                         if (options.requiredAuth === 'active' && options.activeKey) {
                             if (error.message.includes('missing required active authority')) {
-                                reject(new Error('Invalid active key or insufficient authority'));
+                                console.error('Active authority validation failed. Transaction payload:', payload);
+                                reject(new Error('Invalid active key or insufficient authority. The blockchain rejected your active key.'));
                             } else if (error.message.includes('does not have sufficient funds')) {
                                 reject(new Error(error.message));
                             } else {

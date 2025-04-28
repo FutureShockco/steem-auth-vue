@@ -15,7 +15,6 @@
     "prepare": "npm run build"
   },
   "peerDependencies": {
-    "dsteem": "^0.11.3",
     "vue": "^3.5.13"
   },
   "devDependencies": {
@@ -38,6 +37,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "dsteem": "^0.11.3",
+    "steem": "^0.7.11",
     "steemlogin": "^1.0.1"
   }
 }

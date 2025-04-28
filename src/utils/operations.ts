@@ -27,8 +27,8 @@ type OperationType =
 type AuthType = 'posting' | 'active' | 'owner';
 
 interface FieldDefinition {
-    type: 'string' | 'number' | 'boolean'| 'date';
-    value: string | number | boolean;
+    type: 'string' | 'number' | 'boolean' | 'date' | 'array';
+    value: string | number | boolean | object;
 }
 
 export interface OperationDefinition {
@@ -103,9 +103,15 @@ export const operations: OperationDefinition[] = [
         type: 'custom_json',
         requiredAuth: 'posting',
         fields: {
-            requiredAuth: { type: 'string', value: '' },
-            id: { type: 'string', value: '' },
-            json: { type: 'string', value: '{"test": "test"}' },
+            required_auths: { type: 'array', value: [] },
+            required_posting_auths: { type: 'array', value: [] },
+            id: { type: 'string', value: 'sidechain' },
+            json: { type: 'string', value: {
+                contract: 'enable_node',
+                payload: {
+                    pub: ''
+                }
+            }},
         },
     },
     {
@@ -135,13 +141,13 @@ export const operations: OperationDefinition[] = [
             from: { type: 'string', value: '' },
             to: { type: 'string', value: 'futureshock' },
             agent: { type: 'string', value: 'future.witness' },
-            escrow_id: { type: 'number', value: 1 },
+            escrow_id: { type: 'number', value: new Date().getTime() /1000 },
             sbd_amount: { type: 'string', value: '0.000 SBD' },
             steem_amount: { type: 'string', value: '0.005 STEEM' },
             fee: { type: 'string', value: '0.001 STEEM' },
             ratification_deadline: { type: 'date', value: '' },
             escrow_expiration: { type: 'date', value: '' },
-            json_meta: { type: 'string', value: '{"message": "escrow for services"}' },
+            json_meta: { type: 'string', value: '{"message":"escrow for services"}' },
         },
     },
     {
@@ -151,7 +157,7 @@ export const operations: OperationDefinition[] = [
             from: { type: 'string', value: '' },
             to: { type: 'string', value: '' },
             agent: { type: 'string', value: 'futureshock' },
-            escrowId: { type: 'number', value: 0 },
+            escrow_id: { type: 'number', value: 0 },
             memo: { type: 'string', value: '' },
         },
     },
@@ -162,7 +168,7 @@ export const operations: OperationDefinition[] = [
             from: { type: 'string', value: '' },
             to: { type: 'string', value: '' },
             agent: { type: 'string', value: '' },
-            escrowId: { type: 'number', value: 0 },
+            escrow_id: { type: 'number', value: 0 },
             approve: { type: 'boolean', value: false },
         },
     },
@@ -173,7 +179,7 @@ export const operations: OperationDefinition[] = [
             from: { type: 'string', value: '' },
             to: { type: 'string', value: '' },
             agent: { type: 'string', value: '' },
-            escrowId: { type: 'number', value: 0 },
+            escrow_id: { type: 'number', value: 0 },
             memo: { type: 'string', value: '' },
         },
     },
@@ -183,17 +189,17 @@ export const operations: OperationDefinition[] = [
         fields: {
             delegator: { type: 'string', value: '' },
             delegatee: { type: 'string', value: '' },
-            vestingShares: { type: 'string', value: '' },
+            vesting_shares: { type: 'string', value: '12020.000000 VESTS' },
         },
     },
     {
         type: 'set_withdraw_vesting_route',
         requiredAuth: 'active',
         fields: {
-            fromAccount: { type: 'string', value: '' },
-            toAccount: { type: 'string', value: '' },
+            from_account: { type: 'string', value: '' },
+            to_account: { type: 'string', value: '' },
             percent: { type: 'number', value: 0 },
-            autoVest: { type: 'boolean', value: false },
+            auto_vest: { type: 'boolean', value: false },
         },
     },
     {
@@ -202,7 +208,7 @@ export const operations: OperationDefinition[] = [
         fields: {
             owner: { type: 'string', value: '' },
             url: { type: 'string', value: '' },
-            blockSigningKey: { type: 'string', value: '' },
+            block_signing_key: { type: 'string', value: '' },
             props: { type: 'string', value: '' },
             fee: { type: 'string', value: '' },
         },
@@ -212,8 +218,8 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'active',
         fields: {
             creator: { type: 'string', value: '' },
-            newAccountName: { type: 'string', value: '' },
-            jsonMetadata: { type: 'string', value: '' },
+            new_account_name: { type: 'string', value: '' },
+            json_metadata: { type: 'string', value: '' },
             fee: { type: 'string', value: '' },
         },
     },
@@ -223,9 +229,9 @@ export const operations: OperationDefinition[] = [
         fields: {
             creator: { type: 'string', value: '' },
             receiver: { type: 'string', value: '' },
-            startDate: { type: 'string', value: '' },
-            endDate: { type: 'string', value: '' },
-            dailyPay: { type: 'string', value: '' },
+            start_date: { type: 'string', value: '' },
+            end_date: { type: 'string', value: '' },
+            daily_pay: { type: 'string', value: '' },
             subject: { type: 'string', value: '' },
             permlink: { type: 'string', value: '' },
         },
@@ -235,8 +241,8 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'active',
         fields: {
             creator: { type: 'string', value: '' },
-            proposalId: { type: 'number', value: 0 },
-            dailyPay: { type: 'string', value: '' },
+            proposal_id: { type: 'number', value: 0 },
+            daily_pay: { type: 'string', value: '' },
             subject: { type: 'string', value: '' },
             permlink: { type: 'string', value: '' },
         },
@@ -246,7 +252,7 @@ export const operations: OperationDefinition[] = [
         requiredAuth: 'active',
         fields: {
             creator: { type: 'string', value: '' },
-            proposalId: { type: 'number', value: 0 },
+            proposal_id: { type: 'number', value: 0 },
         },
     },
 ]; 

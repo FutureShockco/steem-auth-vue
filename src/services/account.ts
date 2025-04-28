@@ -1,6 +1,4 @@
-import { Client } from 'dsteem';
-
-const client = new Client('https://api.steemit.com');
+import client from '@/helpers/client';
 
 export default class AccountService {
     static async find(username: string) {
