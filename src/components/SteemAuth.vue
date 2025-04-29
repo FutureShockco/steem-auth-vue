@@ -119,7 +119,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import sc from '../helpers/steemlogin';
+import { configureSteemLogin, getSteemLoginClient } from '../helpers/steemlogin';
 
 // Define configuration props with defaults
 const props = withDefaults(defineProps<{
@@ -129,6 +129,8 @@ const props = withDefaults(defineProps<{
     enableDirectLogin?: boolean;
     // Default theme
     defaultDarkMode?: boolean;
+    appName: string;
+    callbackURL: string;
 }>(), {
     enableSteemLogin: true,
     enableKeychain: true,
@@ -177,7 +179,8 @@ const checkKeychain = (): boolean => {
 };
 
 const handleSteemLogin = (): void => {
-    window.location.href = sc.getLoginURL();
+    const client = getSteemLoginClient();
+    window.location.href = client.getLoginURL();
 };
 
 const handleSteemLoginCallback = (): void => {
@@ -259,6 +262,9 @@ onMounted(() => {
     }
     
     store.checkUser();
+
+    // Configure steemlogin when component is mounted
+    configureSteemLogin(props.appName, props.callbackURL);
 });
 
 // Theme management

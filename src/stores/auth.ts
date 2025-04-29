@@ -1,5 +1,5 @@
 import { reactive, readonly, inject, provide } from 'vue';
-import sc from '../helpers/steemlogin';
+import { getSteemLoginClient } from '../helpers/steemlogin';
 import { IAccount } from '../interfaces';
 import AccountService from '../services/account';
 import client from '../helpers/client';
@@ -57,9 +57,10 @@ const createAuthStore = (): AuthStore => {
     const slogin = async (access_token: string) => {
         if (localStorage.getItem(appName + '-access_token') || access_token) {
             const token = localStorage.getItem(appName + '-access_token') || access_token;
-            sc.setAccessToken(token);
+            const client = getSteemLoginClient();
+            client.setAccessToken(token);
             try {
-                const user = await sc.me();
+                const user = await client.me();
                 state.isAuthenticated = true;
                 state.loginAuth = 'steemlogin';
                 state.account = user.account;

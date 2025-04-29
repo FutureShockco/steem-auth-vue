@@ -6,7 +6,7 @@
       </div>
       <div class="navbar-menu">
         <div class="auth-container">
-          <SteemAuth @theme-change="handleThemeChange" />
+          <SteemAuth @theme-change="handleThemeChange" appName="future.app" callbackURL="https://steemx.com" />
         </div>
       </div>
     </nav>

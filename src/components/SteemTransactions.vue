@@ -85,7 +85,11 @@
                   </div>
                 </div>
               </div>
-  
+              <div v-if="operation.type === 'transfer' || operation.type === 'escrow_transfer'">
+                <div>
+                  {{ authStore.state.account?.balance }} - {{ authStore.state.account?.sbd_balance }}
+                </div>
+              </div>
               <button v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)" class="steem-auth-button">
                 Send
               </button>
@@ -244,6 +248,13 @@
     }
   };
   
+  interface TransactionResponse {
+    id?: string;
+    result?: {
+      id: string;
+    };
+  }
+
   const send = async (operation: OperationDefinition) => {
     loading.value = true;
     operationResults.value[operation.type] = {};
@@ -323,24 +334,39 @@
     console.log('Transaction payload:', tx);
     
     try {
-      const response = await TransactionService.send(operation.type, tx, {
-        requiredAuth: operation.requiredAuth
+      const response = await new Promise<TransactionResponse>((resolve, reject) => {
+        TransactionService.send(operation.type, tx, {
+          requiredAuth: operation.requiredAuth
+        })
+          .then(resolve)
+          .catch(reject);
       });
-  
+
       // Handle different response formats based on auth method
       if (authStore.loginAuth === 'steem') {
         operationResults.value[operation.type] = {
           success: `Transaction sent successfully! Transaction ID: ${response.id}`
         };
+      } else if (authStore.loginAuth === 'keychain') {
+        // For keychain, we don't get an immediate response
+        operationResults.value[operation.type] = {
+          success: 'Transaction sent to Keychain for signing. Please check your Keychain extension.'
+        };
       } else {
         operationResults.value[operation.type] = {
-          success: `Transaction sent successfully! Transaction ID: ${response.result.id}`
+          success: `Transaction sent successfully! Transaction ID: ${response.result?.id}`
         };
       }
     } catch (err) {
-      operationResults.value[operation.type] = {
-        error: err instanceof Error ? err.message : 'Failed to send transaction'
-      };
+      if (err instanceof Error && err.message === 'Please sign the transaction in the new window') {
+        operationResults.value[operation.type] = {
+          success: 'Please sign the transaction in the new window'
+        };
+      } else {
+        operationResults.value[operation.type] = {
+          error: err instanceof Error ? err.message : 'Failed to send transaction'
+        };
+      }
     } finally {
       loading.value = false;
     }

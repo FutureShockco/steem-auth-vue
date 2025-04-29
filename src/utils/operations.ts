@@ -102,6 +102,16 @@ export const operations: OperationDefinition[] = [
         },
     },
     {
+        type: 'transfer',
+        requiredAuth: 'active',
+        fields: {
+            from: { type: 'string', value: '' },
+            to: { type: 'string', value: 'futureshock' },
+            amount: { type: 'string', value: '0.001 SBD' },
+            memo: { type: 'string', value: 'simple memo' },
+        },
+    },
+    {
         type: 'vote',
         requiredAuth: 'posting',
         fields: {

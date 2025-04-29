@@ -1,5 +1,4 @@
-import client from "@/helpers/client";
-import steemlogin from "@/helpers/steemlogin";
+import { getSteemLoginClient } from '../helpers/steemlogin';
 import EncryptionService from "@/services/encryption"
 import type { ITransaction } from "@/interfaces";
 import { PrivateKey } from "dsteem";
@@ -40,6 +39,8 @@ class TransactionService {
             console.log('Sending transaction with options:', options);
             console.log('Transaction payload:', payload);
 
+            const client = getSteemLoginClient();
+
             if (authStore.loginAuth === 'keychain' && window.steem_keychain) {
                 const keyType = options.requiredAuth === 'active' ? 'Active' : 
                               options.requiredAuth === 'owner' ? 'Owner' : 'Posting';
@@ -59,21 +60,21 @@ class TransactionService {
                     // For active key operations, directly use the sign URL approach
                     if (options.requiredAuth === 'active') {
                         console.log('SteemLogin with active key operation - opening sign URL');
-                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
+                        const signUrl = client.openSteemLoginSignUrl(trx, payload);
                         console.log('Opened SteemLogin sign URL:', signUrl);
                         reject(new Error('Please sign the transaction in the new window'));
                         return;
                     }
 
                     // For posting key operations, try the standard broadcast
-                    const result = await steemlogin.broadcast(transaction.operations);
+                    const result = await client.broadcast(transaction.operations);
                     console.log('Transaction broadcasted:', result);
                     resolve(result);
                 } catch (error: any) {
                     console.error('Error broadcasting transaction:', error);
                     if (error.error === 'invalid_scope') {
                         // Construct the SteemLogin sign URL
-                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
+                        const signUrl = client.openSteemLoginSignUrl(trx, payload);
                         console.log('Opened SteemLogin sign URL after error:', signUrl);
                         reject(new Error('Please sign the transaction in the new window'));
                         return;
