@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { configureSteemLogin, getSteemLoginClient } from '../helpers/steemlogin';
 
@@ -150,6 +150,10 @@ const emit = defineEmits<{
 interface AuthState {
     isAuthenticated: boolean;
     username: string;
+    account: any | null;
+    loginAuth: 'steem' | 'keychain' | 'steemlogin';
+    appName: string;
+    callbackURL: string;
 }
 
 interface AuthStore {
@@ -158,6 +162,7 @@ interface AuthStore {
     handleLogin: (username: string, useKeychain: boolean, postingKey: string) => Promise<void>;
     logout: () => void;
     checkUser: () => void;
+    setConfig: (appName: string, callbackURL: string) => void;
 }
 
 // Initialize store with proper typing
@@ -246,6 +251,11 @@ const handleLogout = (): void => {
     store.logout();
 };
 
+// Watch for prop changes and update store
+watch(() => [props.appName, props.callbackURL], ([newAppName, newCallbackURL]) => {
+    store.setConfig(newAppName, newCallbackURL);
+}, { immediate: true });
+
 onMounted(() => {
     // Initialize theme
     initTheme();
@@ -267,7 +277,7 @@ onMounted(() => {
     store.checkUser();
 
     // Configure steemlogin when component is mounted
-    configureSteemLogin(props.appName, props.callbackURL);
+    configureSteemLogin(store.state.appName, store.state.callbackURL);
 });
 
 // Theme management

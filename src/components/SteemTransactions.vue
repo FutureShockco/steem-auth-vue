@@ -40,7 +40,7 @@
                       : fieldDef.value = ($event.target as HTMLInputElement).value"
                   />
                 </div>
-                <div v-else-if="fieldDef.type === 'array' && (field === 'required_auths' || field === 'required_posting_auths') && operation.type === 'custom_json'">
+                <div v-else-if="fieldDef.type === 'array' && (field === 'required_auths' || field === 'required_posting_auths' || field === 'required_owner_auths' || field === 'required_active_auths') && (operation.type === 'custom_json' || operation.type === 'custom_binary')">
                   <!-- Skip individual array input fields for these specific fields as they'll be handled by the auth type selector -->
                 </div>
                 <div v-else class="d-flex mx-1" :data-trigger-switch="field.toString() + index">
@@ -58,7 +58,7 @@
               </div>
   
               <!-- Add auth type selector for custom_json operation -->
-              <div v-if="operation.type === 'custom_json'" class="form-group steem-auth-auth-type-selector">
+              <div v-if="operation.type === 'custom_json' || operation.type === 'custom_binary'" class="form-group steem-auth-auth-type-selector">
                 <label>Authorization Type</label>
                 <div class="steem-auth-radio-options">
                   <div class="steem-auth-radio-option">
@@ -82,6 +82,17 @@
                       @change="updateCustomJsonAuth(operation)"
                     >
                     <label for="auth-type-posting">Posting</label>
+                  </div>
+                  <div class="steem-auth-radio-option" v-if="operation.type === 'custom_binary'">
+                    <input 
+                      type="radio" 
+                      id="auth-type-posting" 
+                      name="auth-type" 
+                      value="owner"
+                      v-model="customJsonAuthType"
+                      @change="updateCustomJsonAuth(operation)"
+                    >
+                    <label for="auth-type-posting">Owner</label>
                   </div>
                 </div>
               </div>
@@ -188,10 +199,14 @@
   
   // Add new function to update custom_json auth arrays based on selection
   const updateCustomJsonAuth = (operation: OperationDefinition) => {
-    if (operation.type === 'custom_json') {
+    if (operation.type === 'custom_json' || operation.type === 'custom_binary') {
       // Reset both arrays
       operation.fields.required_auths.value = [];
       operation.fields.required_posting_auths.value = [];
+      if (operation.type === 'custom_binary') {
+        operation.fields.required_owner_auths.value = [];
+        operation.fields.required_active_auths.value = [];
+      }
       
       // Add username to the appropriate array based on selected auth type
       if (customJsonAuthType.value === 'active') {

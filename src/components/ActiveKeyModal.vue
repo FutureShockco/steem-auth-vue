@@ -44,7 +44,7 @@ import TransactionService from '../services/transaction';
 
 const props = defineProps<{
   show: boolean;
-  operation: OperationDefinition & { requiredAuth: 'active' | 'posting' };
+  operation: OperationDefinition & { requiredAuth: 'active' | 'posting' | 'owner' };
 }>();
 
 const emit = defineEmits<{
