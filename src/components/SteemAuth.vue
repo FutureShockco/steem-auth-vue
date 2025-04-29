@@ -231,6 +231,13 @@ const validateForm = (): boolean => {
     return isValid;
 };
 
+// Watch for authentication state changes
+watch(() => store.state.isAuthenticated, (newValue) => {
+    if (newValue && showModal.value) {
+        showModal.value = false;
+    }
+});
+
 const handleSubmit = async (): Promise<void> => {
     if (!validateForm()) return;
 
@@ -239,9 +246,13 @@ const handleSubmit = async (): Promise<void> => {
 
     try {
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
-        showModal.value = false;
+        // Only close the modal for non-Keychain login
+        if (!useKeychain.value) {
+            showModal.value = false;
+        }
     } catch (err: Error | unknown) {
         error.value = err instanceof Error ? err.message : 'Login failed';
+        showModal.value = false;
     } finally {
         loading.value = false;
     }

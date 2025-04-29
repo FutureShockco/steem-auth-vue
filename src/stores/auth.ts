@@ -112,13 +112,19 @@ const createAuthStore = (): AuthStore => {
                                 state.loginAuth = 'keychain';
                                 state.account = user;
                                 state.username = user.name;
+                                // Force a state update by triggering a checkUser
+                                checkUser();
                             } else {
                                 console.log("Signing failed:", response.message);
+                                throw new Error(response.message || "Keychain signing failed");
                             }
                         }
                     );
+                    // Return immediately after sending the request
+                    return;
                 } catch (e) {
                     console.log(e);
+                    throw e;
                 }
             } else {
                 if (!posting_key) {

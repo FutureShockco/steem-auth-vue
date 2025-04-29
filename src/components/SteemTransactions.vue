@@ -7,10 +7,42 @@
       </div>
   
       <div v-else class="steem-auth-transactions-content">
+        <!-- Transaction Status Component -->
+        <div v-if="transactionStore.state.isPending || transactionStore.state.isSuccess || transactionStore.state.isError" 
+             class="transaction-status"
+             :class="{
+               'is-pending': transactionStore.state.isPending,
+               'is-success': transactionStore.state.isSuccess,
+               'is-error': transactionStore.state.isError
+             }">
+          <!-- Pending Message -->
+          <div v-if="transactionStore.state.isPending" class="transaction-pending">
+            <div class="transaction-spinner"></div>
+            <p>{{ transactionStore.state.pendingMessage }}</p>
+          </div>
+          
+          <!-- Success Message -->
+          <div v-if="transactionStore.state.isSuccess" class="transaction-success">
+            <div class="transaction-success-icon">✓</div>
+            <p>{{ transactionStore.state.successMessage }}</p>
+            <div v-if="transactionStore.state.transactionId" class="transaction-id">
+              Transaction ID: {{ transactionStore.state.transactionId }}
+            </div>
+            <button @click="transactionStore.resetState" class="transaction-dismiss">Dismiss</button>
+          </div>
+          
+          <!-- Error Message -->
+          <div v-if="transactionStore.state.isError" class="transaction-error">
+            <div class="transaction-error-icon">✗</div>
+            <p>{{ transactionStore.state.errorMessage }}</p>
+            <button @click="transactionStore.resetState" class="transaction-dismiss">Dismiss</button>
+          </div>
+        </div>
+        
         <div class="steem-auth-transaction-item" v-for="operation in operations" :key="operation.type">
           <div>
             <h2>{{ operation.type }} operation (require:{{ operation.requiredAuth }} key)</h2>
-            <form @submit.prevent="handleOperation(operation)" class="steem-auth-transaction-form">
+            <form @submit.prevent="" class="steem-auth-transaction-form">
               <div class="form-group" v-for="(fieldDef, field, index) in operation.fields" :key="field">
                 <div v-if="fieldDef.type === 'string' || fieldDef.type === 'number' || fieldDef.type === 'date'">
                   <label :for="field.toString() + index">{{ field }}</label>
@@ -105,11 +137,11 @@
                 Send
               </button>
   
-              <div v-if="operationResults[operation.type]?.success" class="steem-auth-success-message">
-                {{ operationResults[operation.type].success }}
+              <div v-if="transactionStore.results[operation.type]?.success" class="steem-auth-success-message">
+                {{ transactionStore.results[operation.type].success }}
               </div>
-              <div v-if="operationResults[operation.type]?.error" class="steem-auth-error-message">
-                {{ operationResults[operation.type].error }}
+              <div v-if="transactionStore.results[operation.type]?.error" class="steem-auth-error-message">
+                {{ transactionStore.results[operation.type].error }}
               </div>
             </form>
           </div>
@@ -129,6 +161,7 @@
   <script setup lang="ts">
   import { ref, watch, onMounted } from 'vue';
   import { useAuthStore } from '../stores/auth';
+  import { useTransactionStore } from '../stores/transaction';
   import TransactionService from '../services/transaction';
   import { operations, type OperationDefinition } from '../utils/operations';
   import { type OperationDefinition as EchelonOperationDefinition } from '../utils/echelon';
@@ -140,6 +173,7 @@
   };
   
   const authStore = useAuthStore();
+  const transactionStore = useTransactionStore();
   const loading = ref(false);
   const formValues = ref<Record<string, Record<string, any>>>({});
   const showActiveKeyModal = ref(false);
@@ -150,7 +184,6 @@
     fields: {},
     requiredAuth: 'active'
   } as ExtendedOperation);
-  const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
   
   const isoToInputFormat = (isoString: string | number | boolean | object): string => {
     if (typeof isoString !== 'string') return '';
@@ -265,7 +298,7 @@
   
   const handleSuccess = (result: any) => {
     if (currentOperation.value) {
-      operationResults.value[currentOperation.value.type] = {
+      transactionStore.results[currentOperation.value.type] = {
         success: `Transaction sent successfully! Transaction ID: ${result.id}`
       };
     }
@@ -280,7 +313,10 @@
 
   const send = async (operation: OperationDefinition) => {
     loading.value = true;
-    operationResults.value[operation.type] = {};
+    
+    // Clear previous results for this operation type
+    transactionStore.clearResults(operation.type);
+    
     const tx = {} as any;
     
     // Process all fields
@@ -367,26 +403,26 @@
 
       // Handle different response formats based on auth method
       if (authStore.loginAuth === 'steem') {
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           success: `Transaction sent successfully! Transaction ID: ${response.id}`
         };
       } else if (authStore.loginAuth === 'keychain') {
         // For keychain, we don't get an immediate response
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           success: 'Transaction sent to Keychain for signing. Please check your Keychain extension.'
         };
       } else {
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           success: `Transaction sent successfully! Transaction ID: ${response.result?.id}`
         };
       }
     } catch (err) {
       if (err instanceof Error && err.message === 'Please sign the transaction in the new window') {
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           success: 'Please sign the transaction in the new window'
         };
       } else {
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           error: err instanceof Error ? err.message : 'Failed to send transaction'
         };
       }
@@ -430,4 +466,99 @@
   };
   
   </script>
+  
+  <style scoped>
+  /* Existing styles */
+
+  /* Transaction Status Styles */
+  .transaction-status {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .is-pending {
+    background-color: #f8f9fa;
+    border-left: 4px solid #4299e1;
+  }
+
+  .is-success {
+    background-color: #f0fff4;
+    border-left: 4px solid #48bb78;
+  }
+
+  .is-error {
+    background-color: #fff5f5;
+    border-left: 4px solid #f56565;
+  }
+
+  .transaction-pending, .transaction-success, .transaction-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .transaction-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(66, 153, 225, 0.3);
+    border-radius: 50%;
+    border-top-color: #4299e1;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 10px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .transaction-success-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #48bb78;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .transaction-error-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #f56565;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .transaction-id {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 5px;
+    word-break: break-all;
+  }
+
+  .transaction-dismiss {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+
+  .transaction-dismiss:hover {
+    background-color: #edf2f7;
+  }
+  </style>
   
