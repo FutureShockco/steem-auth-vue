@@ -116,7 +116,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, watch } from 'vue';
+  import { ref, watch, onMounted } from 'vue';
   import { useAuthStore } from '../stores/auth';
   import TransactionService from '../services/transaction';
   import { operations, type OperationDefinition } from '../utils/operations';
@@ -125,7 +125,7 @@
   
   // Define the extended operation type that includes requiredAuth
   type ExtendedOperation = EchelonOperationDefinition & {
-    requiredAuth: 'active' | 'posting';
+    requiredAuth: 'active' | 'posting' | 'owner';
   };
   
   const authStore = useAuthStore();
@@ -168,20 +168,23 @@
     });
   };
   
-  // Watch for account changes
-  watch(() => authStore.state.account, (newAccount) => {
-    if (newAccount) {
-      updateFormValues();
-      
-      // Initialize custom_json auth arrays for the current user
-      const customJsonOp = operations.find(op => op.type === 'custom_json');
-      if (customJsonOp) {
-        updateCustomJsonAuth(customJsonOp);
+  // Move initialization to onMounted
+  onMounted(() => {
+    updateFormValues();
+    
+    // Watch for account changes
+    watch(() => authStore.state.account, (newAccount) => {
+      if (newAccount) {
+        updateFormValues();
+        
+        // Initialize custom_json auth arrays for the current user
+        const customJsonOp = operations.find(op => op.type === 'custom_json');
+        if (customJsonOp) {
+          updateCustomJsonAuth(customJsonOp);
+        }
       }
-    }
-  }, { immediate: true });
-  
-  updateFormValues();
+    }, { immediate: true });
+  });
   
   // Add new function to update custom_json auth arrays based on selection
   const updateCustomJsonAuth = (operation: OperationDefinition) => {
@@ -195,7 +198,12 @@
         operation.fields.required_auths.value = [authStore.state.username];
         // Explicitly set requiredAuth to 'active' to ensure active key is requested
         operation.requiredAuth = 'active';
-      } else {
+      } 
+      else if (customJsonAuthType.value === 'owner') {
+        operation.fields.required_owner_auths.value = [authStore.state.username];
+        operation.requiredAuth = 'owner';
+      }
+      else {
         operation.fields.required_posting_auths.value = [authStore.state.username];
         // Set back to posting for posting auth
         operation.requiredAuth = 'posting';
@@ -214,12 +222,12 @@
       console.log(`Operation requiredAuth after update: ${operation.requiredAuth}`);
     }
   
-    if (operation.requiredAuth === 'active' && authStore.loginAuth === 'steem') {
+    if ((operation.requiredAuth === 'active' || operation.requiredAuth === 'owner') && authStore.loginAuth === 'steem') {
       // Convert the operation to the expected type
       currentOperation.value = {
         type: operation.type as any,
         fields: operation.fields,
-        requiredAuth: operation.requiredAuth as 'active' | 'posting'
+        requiredAuth: operation.requiredAuth as 'active' | 'posting' | 'owner'
       } as ExtendedOperation;
       
       console.log(`Showing active key modal for ${operation.type} with auth type: ${operation.requiredAuth}`);

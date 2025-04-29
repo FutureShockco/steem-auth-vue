@@ -8,22 +8,25 @@
             </button>
 
             <!-- Login Button / User Info -->
-            <button v-if="!store.state.isAuthenticated" @click="showModal = true" class="steem-auth-button">
-                <slot name="trigger">
-                    <span>Login to Steem</span>
-                </slot>
-            </button>
-
-            <div v-else class="steem-auth-user-info">
-                <slot name="user-info">
-                    <div class="steem-auth-user-profile">
-                        <span class="steem-auth-username">{{ store.state.username }}</span>
-                        <button @click="handleLogout" class="steem-auth-button">
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                </slot>
-            </div>
+            <template v-if="!store.state.isAuthenticated">
+                <button @click="showModal = true" class="steem-auth-button">
+                    <slot name="trigger">
+                        <span>Login to Steem</span>
+                    </slot>
+                </button>
+            </template>
+            <template v-else>
+                <div class="steem-auth-user-info">
+                    <slot name="user-info">
+                        <div class="steem-auth-user-profile">
+                            <span class="steem-auth-username">{{ store.state.username }}</span>
+                            <button @click="handleLogout" class="steem-auth-button">
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </slot>
+                </div>
+            </template>
         </div>
 
         <!-- Modal -->

@@ -165,11 +165,13 @@ export const operations: OperationDefinition[] = [
         fields: {
             required_auths: { type: 'array', value: [] },
             required_posting_auths: { type: 'array', value: [] },
-            id: { type: 'string', value: 'sidechain' },
+            id: { type: 'string', value: 'test' },
             json: { type: 'string', value: {
-                contract: 'enable_node',
+                app: 'future.app',
                 payload: {
-                    pub: ''
+                    action: 'upgradeBuilding',
+                    building: 'headquarters',
+                    level: 2
                 }
             }},
         },
@@ -533,6 +535,10 @@ export const operations: OperationDefinition[] = [
         type: 'custom_binary',
         requiredAuth: 'posting',
         fields: {
+            required_auths: { type: 'array', value: [] },
+            required_posting_auths: { type: 'array', value: [] },
+            required_active_auths: { type: 'array', value: [] },
+            required_owner_auths: { type: 'array', value: [] },
             id: { type: 'string', value: '' },
             data: { type: 'string', value: '' }
         }
