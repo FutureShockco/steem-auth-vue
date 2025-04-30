@@ -137,3 +137,4 @@ dist
 .cursor/rules/vue-component-structure.mdc
 package-lock.json
 test/package-lock.json
+test/vitest.config.ts

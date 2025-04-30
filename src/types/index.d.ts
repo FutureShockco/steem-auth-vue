@@ -1,9 +1,6 @@
 import { Component } from 'vue';
 import { IAccount } from '../interfaces';
 
-export interface SteemAuthProps {
-    appName?: string;
-}
 
 export interface SteemAuthState {
     isAuthenticated: boolean;

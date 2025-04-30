@@ -419,6 +419,14 @@
   margin-top: 15px;
 }
 
+.steem-auth-transaction-form .form-group div {
+  display: grid;
+}
+
+.steem-auth-transaction-form .steem-auth-button {
+  width: 100%;
+}
+
 .steem-auth-transaction-form textarea {
   min-height: 100px;
   resize: vertical;

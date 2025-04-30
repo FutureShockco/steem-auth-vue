@@ -8,22 +8,25 @@
             </button>
 
             <!-- Login Button / User Info -->
-            <button v-if="!store.state.isAuthenticated" @click="showModal = true" class="steem-auth-button">
-                <slot name="trigger">
-                    <span>Login to Steem</span>
-                </slot>
-            </button>
-
-            <div v-else class="steem-auth-user-info">
-                <slot name="user-info">
-                    <div class="steem-auth-user-profile">
-                        <span class="steem-auth-username">{{ store.state.username }}</span>
-                        <button @click="handleLogout" class="steem-auth-button">
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                </slot>
-            </div>
+            <template v-if="!store.state.isAuthenticated">
+                <button @click="showModal = true" class="steem-auth-button">
+                    <slot name="trigger">
+                        <span>Login to Steem</span>
+                    </slot>
+                </button>
+            </template>
+            <template v-else>
+                <div class="steem-auth-user-info">
+                    <slot name="user-info">
+                        <div class="steem-auth-user-profile">
+                            <span class="steem-auth-username">{{ store.state.username }}</span>
+                            <button @click="handleLogout" class="steem-auth-button">
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </slot>
+                </div>
+            </template>
         </div>
 
         <!-- Modal -->
@@ -117,9 +120,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import sc from '../helpers/steemlogin';
+import { configureSteemLogin, getSteemLoginClient } from '../helpers/steemlogin';
 
 // Define configuration props with defaults
 const props = withDefaults(defineProps<{
@@ -129,6 +132,8 @@ const props = withDefaults(defineProps<{
     enableDirectLogin?: boolean;
     // Default theme
     defaultDarkMode?: boolean;
+    appName: string;
+    callbackURL: string;
 }>(), {
     enableSteemLogin: true,
     enableKeychain: true,
@@ -145,6 +150,10 @@ const emit = defineEmits<{
 interface AuthState {
     isAuthenticated: boolean;
     username: string;
+    account: any | null;
+    loginAuth: 'steem' | 'keychain' | 'steemlogin';
+    appName: string;
+    callbackURL: string;
 }
 
 interface AuthStore {
@@ -153,6 +162,7 @@ interface AuthStore {
     handleLogin: (username: string, useKeychain: boolean, postingKey: string) => Promise<void>;
     logout: () => void;
     checkUser: () => void;
+    setConfig: (appName: string, callbackURL: string) => void;
 }
 
 // Initialize store with proper typing
@@ -177,7 +187,8 @@ const checkKeychain = (): boolean => {
 };
 
 const handleSteemLogin = (): void => {
-    window.location.href = sc.getLoginURL();
+    const client = getSteemLoginClient();
+    window.location.href = client.getLoginURL();
 };
 
 const handleSteemLoginCallback = (): void => {
@@ -220,6 +231,13 @@ const validateForm = (): boolean => {
     return isValid;
 };
 
+// Watch for authentication state changes
+watch(() => store.state.isAuthenticated, (newValue) => {
+    if (newValue && showModal.value) {
+        showModal.value = false;
+    }
+});
+
 const handleSubmit = async (): Promise<void> => {
     if (!validateForm()) return;
 
@@ -228,9 +246,13 @@ const handleSubmit = async (): Promise<void> => {
 
     try {
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
-        showModal.value = false;
+        // Only close the modal for non-Keychain login
+        if (!useKeychain.value) {
+            showModal.value = false;
+        }
     } catch (err: Error | unknown) {
         error.value = err instanceof Error ? err.message : 'Login failed';
+        showModal.value = false;
     } finally {
         loading.value = false;
     }
@@ -239,6 +261,11 @@ const handleSubmit = async (): Promise<void> => {
 const handleLogout = (): void => {
     store.logout();
 };
+
+// Watch for prop changes and update store
+watch(() => [props.appName, props.callbackURL], ([newAppName, newCallbackURL]) => {
+    store.setConfig(newAppName, newCallbackURL);
+}, { immediate: true });
 
 onMounted(() => {
     // Initialize theme
@@ -259,6 +286,9 @@ onMounted(() => {
     }
     
     store.checkUser();
+
+    // Configure steemlogin when component is mounted
+    configureSteemLogin(store.state.appName, store.state.callbackURL);
 });
 
 // Theme management
