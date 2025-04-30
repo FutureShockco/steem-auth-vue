@@ -116,24 +116,27 @@
   import { useAuthStore } from '../stores/auth';
   import TransactionService from '../services/transaction';
   import { operations, type OperationDefinition } from '../utils/operations';
-  import { type OperationDefinition as EchelonOperationDefinition } from '../utils/echelon';
   import ActiveKeyModal from './ActiveKeyModal.vue';
   
   // Define the extended operation type that includes requiredAuth
-  type ExtendedOperation = EchelonOperationDefinition & {
+  type ExtendedOperation = {
+    type: string; // We use string since we're dealing with operation types from both echelon and operations
+    fields: Record<string, any>;
     requiredAuth: 'active' | 'posting';
+    fieldValues: Record<string, any>;
   };
   
   const authStore = useAuthStore();
   const loading = ref(false);
   const formValues = ref<Record<string, Record<string, any>>>({});
   const showActiveKeyModal = ref(false);
-  const customJsonAuthType = ref('posting'); // Default to posting auth for custom_json
+  const customJsonAuthType = ref<'posting' | 'active'>('posting'); // Default to posting auth for custom_json
   const jsonErrors = ref<Record<string, string>>({}); // For JSON parsing errors
   const currentOperation = ref<ExtendedOperation>({
     type: 'approve_node',
     fields: {},
-    requiredAuth: 'active'
+    requiredAuth: 'active',
+    fieldValues: {}
   } as ExtendedOperation);
   const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
   
@@ -211,12 +214,20 @@
     }
   
     if (operation.requiredAuth === 'active' && authStore.loginAuth === 'steem') {
-      // Convert the operation to the expected type
+      // Convert the operation to the expected type with fieldValues
+      const fieldValues: Record<string, any> = {};
+      
+      // Extract values from fields and put them in fieldValues
+      Object.entries(operation.fields).forEach(([key, field]) => {
+        fieldValues[key] = field.value;
+      });
+      
       currentOperation.value = {
-        type: operation.type as any,
+        type: operation.type,
         fields: operation.fields,
-        requiredAuth: operation.requiredAuth as 'active' | 'posting'
-      } as ExtendedOperation;
+        requiredAuth: operation.requiredAuth,
+        fieldValues
+      };
       
       console.log(`Showing active key modal for ${operation.type} with auth type: ${operation.requiredAuth}`);
       showActiveKeyModal.value = true;
@@ -232,7 +243,8 @@
     currentOperation.value = {
       type: 'approve_node',
       fields: {},
-      requiredAuth: 'active'
+      requiredAuth: 'active',
+      fieldValues: {}
     } as ExtendedOperation;
   };
   
@@ -381,4 +393,5 @@
   };
   
   </script>
+  
   

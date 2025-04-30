@@ -37,14 +37,21 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type OperationDefinition } from '../utils/echelon';
 import { PrivateKey } from 'dsteem';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 
+// Define the extended operation type that includes field values
+type ExtendedOperation = {
+  type: string;
+  fields: Record<string, any>;
+  requiredAuth: 'active' | 'posting';
+  fieldValues: Record<string, any>;
+};
+
 const props = defineProps<{
   show: boolean;
-  operation: OperationDefinition & { requiredAuth: 'active' | 'posting' };
+  operation: ExtendedOperation;
 }>();
 
 const emit = defineEmits<{
@@ -108,17 +115,17 @@ const handleSubmit = async () => {
     const tx = {} as any;
     Object.keys(props.operation.fields).forEach((key) => {
       // Special handling for JSON fields
-      if ((props.operation.type as string === 'custom_json' && key === 'json') ||
-          (props.operation.type as string === 'escrow_transfer' && key === 'json_meta') ||
+      if ((props.operation.type === 'custom_json' && key === 'json') ||
+          (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
           (key.includes('json_meta'))) {
         
-        if (typeof props.operation.fields[key].value !== 'string') {
-          tx[key] = JSON.stringify(props.operation.fields[key].value);
+        if (typeof props.operation.fieldValues[key] !== 'string') {
+          tx[key] = JSON.stringify(props.operation.fieldValues[key]);
         } else {
-          tx[key] = props.operation.fields[key].value;
+          tx[key] = props.operation.fieldValues[key];
         }
       } else {
-        tx[key] = props.operation.fields[key].value;
+        tx[key] = props.operation.fieldValues[key];
       }
     });
 
@@ -148,7 +155,7 @@ const handleSubmit = async () => {
         error.value = 'Missing active authority. The blockchain rejected your active key. Please ensure you are using the correct active key for this account.';
       } else if (err.message.includes('does not have sufficient funds')) {
         // Get the actual transfer amount from the operation
-        const amount = props.operation.fields.amount?.value as string || '0';
+        const amount = props.operation.fieldValues.amount as string || '0';
         const [amountValue, currency] = amount.split(' ');
         
         error.value = `Insufficient funds. Required: ${amountValue} ${currency}, Available: 0 ${currency}`;
@@ -170,7 +177,3 @@ const handleSubmit = async () => {
   }
 };
 </script>
-
-<style scoped>
-/* These styles will be removed in favor of using the global styles */
-</style> 
