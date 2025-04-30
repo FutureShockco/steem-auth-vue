@@ -19,7 +19,6 @@
                 <div class="steem-auth-user-info">
                     <slot name="user-info">
                         <div class="steem-auth-user-profile">
-                            <span class="steem-auth-username">{{ store.state.username }}</span>
                             <button @click="handleLogout" class="steem-auth-button">
                                 <span>Logout</span>
                             </button>

@@ -4,7 +4,7 @@
 /**
  * All available Echelon operation types
  */
-export type OperationType = 'approve_node' | 'chain_update_create' | 'fund_request_contrib' | 'fund_request_create' | 'fund_request_work' | 'fund_request_work_review' | 'md_queue' | 'md_sign' | 'proposal_edit' | 'proposal_vote' | 'disapprove_node' | 'enable_node' | 'create_market' | 'place_order' | 'create_collection' | 'transfer_nft' | 'create_pool' | 'stake' | 'unstake' | 'create_token' | 'mint_token' | 'transfer_token' | 'update_token' | 'transfer' | 'user_json';
+export type OperationType = 'approve_node' | 'chain_update_create' | 'fund_request_contrib' | 'fund_request_create' | 'fund_request_work' | 'fund_request_work_review' | 'md_queue' | 'md_sign' | 'proposal_edit' | 'proposal_vote' | 'disapprove_node' | 'enable_node' | 'create_market' | 'place_order' | 'create_collection' | 'transfer_nft' | 'create_pool' | 'stake' | 'swap' | 'swap_route' | 'unstake' | 'create_token' | 'mint_token' | 'transfer_token' | 'update_token' | 'transfer' | 'user_json';
 
 /**
  * Field type definitions for operations
@@ -187,24 +187,46 @@ export const operations: OperationDefinition[] = [
         type: 'create_pool',
         requiredAuth: 'active',
         fields: {
-            token: { type: 'string', required: true },
-            apr: { type: 'number', required: true }
+            token0: { type: 'string', required: true },
+            token1: { type: 'string', required: true }
         }
     },
     {
         type: 'stake',
         requiredAuth: 'active',
         fields: {
-            token: { type: 'string', required: true },
-            amount: { type: 'number', required: true }
+            token0: { type: 'string', required: true },
+            token1: { type: 'string', required: true },
+            amount0: { type: 'number', required: true },
+            amount1: { type: 'number', required: true }
+        }
+    },
+    {
+        type: 'swap',
+        requiredAuth: 'active',
+        fields: {
+            tokenIn: { type: 'string', required: true },
+            tokenOut: { type: 'string', required: true },
+            amountIn: { type: 'number', required: true },
+            minAmountOut: { type: 'number', required: true }
+        }
+    },
+    {
+        type: 'swap_route',
+        requiredAuth: 'active',
+        fields: {
+            path: { type: 'array', required: false },
+            amountIn: { type: 'number', required: true },
+            minAmountOut: { type: 'number', required: true }
         }
     },
     {
         type: 'unstake',
         requiredAuth: 'active',
         fields: {
-            token: { type: 'string', required: true },
-            amount: { type: 'number', required: true }
+            token0: { type: 'string', required: true },
+            token1: { type: 'string', required: true },
+            lpAmount: { type: 'number', required: true }
         }
     },
     {
