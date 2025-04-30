@@ -3,6 +3,7 @@ import SteemAuth from './components/SteemAuth.vue';
 import SteemTransactions from './components/SteemTransactions.vue';
 import EchelonTransactions from './components/EchelonTransactions.vue';
 import { useAuthStore, provideAuthStore } from './stores/auth';
+import TransactionService from './services/transaction';
 
 // Import global CSS
 import './assets/styles/global.css';
@@ -13,7 +14,8 @@ export {
     SteemTransactions,
     EchelonTransactions,
     useAuthStore,
-    provideAuthStore
+    provideAuthStore,
+    TransactionService
 };
 
 // Plugin installation function
