@@ -7,10 +7,42 @@
       </div>
   
       <div v-else class="steem-auth-transactions-content">
+        <!-- Transaction Status Component -->
+        <div v-if="transactionStore.state.isPending || transactionStore.state.isSuccess || transactionStore.state.isError" 
+             class="transaction-status"
+             :class="{
+               'is-pending': transactionStore.state.isPending,
+               'is-success': transactionStore.state.isSuccess,
+               'is-error': transactionStore.state.isError
+             }">
+          <!-- Pending Message -->
+          <div v-if="transactionStore.state.isPending" class="transaction-pending">
+            <div class="transaction-spinner"></div>
+            <p>{{ transactionStore.state.pendingMessage }}</p>
+          </div>
+          
+          <!-- Success Message -->
+          <div v-if="transactionStore.state.isSuccess" class="transaction-success">
+            <div class="transaction-success-icon">✓</div>
+            <p>{{ transactionStore.state.successMessage }}</p>
+            <div v-if="transactionStore.state.transactionId" class="transaction-id">
+              Transaction ID: {{ transactionStore.state.transactionId }}
+            </div>
+            <button @click="transactionStore.resetState" class="transaction-dismiss">Dismiss</button>
+          </div>
+          
+          <!-- Error Message -->
+          <div v-if="transactionStore.state.isError" class="transaction-error">
+            <div class="transaction-error-icon">✗</div>
+            <p>{{ transactionStore.state.errorMessage }}</p>
+            <button @click="transactionStore.resetState" class="transaction-dismiss">Dismiss</button>
+          </div>
+        </div>
+        
         <div class="steem-auth-transaction-item" v-for="operation in operations" :key="operation.type">
           <div>
             <h2>{{ operation.type }} operation (require:{{ operation.requiredAuth }} key)</h2>
-            <form @submit.prevent="handleOperation(operation)" class="steem-auth-transaction-form">
+            <form @submit.prevent="" class="steem-auth-transaction-form">
               <div class="form-group" v-for="(fieldDef, field, index) in operation.fields" :key="field">
                 <div v-if="fieldDef.type === 'string' || fieldDef.type === 'number' || fieldDef.type === 'date'">
                   <label :for="field.toString() + index">{{ field }}</label>
@@ -40,7 +72,7 @@
                       : fieldDef.value = ($event.target as HTMLInputElement).value"
                   />
                 </div>
-                <div v-else-if="fieldDef.type === 'array' && (field === 'required_auths' || field === 'required_posting_auths') && operation.type === 'custom_json'">
+                <div v-else-if="fieldDef.type === 'array' && (field === 'required_auths' || field === 'required_posting_auths' || field === 'required_owner_auths' || field === 'required_active_auths') && (operation.type === 'custom_json' || operation.type === 'custom_binary')">
                   <!-- Skip individual array input fields for these specific fields as they'll be handled by the auth type selector -->
                 </div>
                 <div v-else class="d-flex mx-1" :data-trigger-switch="field.toString() + index">
@@ -58,7 +90,7 @@
               </div>
   
               <!-- Add auth type selector for custom_json operation -->
-              <div v-if="operation.type === 'custom_json'" class="form-group steem-auth-auth-type-selector">
+              <div v-if="operation.type === 'custom_json' || operation.type === 'custom_binary'" class="form-group steem-auth-auth-type-selector">
                 <label>Authorization Type</label>
                 <div class="steem-auth-radio-options">
                   <div class="steem-auth-radio-option">
@@ -83,18 +115,33 @@
                     >
                     <label for="auth-type-posting">Posting</label>
                   </div>
+                  <div class="steem-auth-radio-option" v-if="operation.type === 'custom_binary'">
+                    <input 
+                      type="radio" 
+                      id="auth-type-posting" 
+                      name="auth-type" 
+                      value="owner"
+                      v-model="customJsonAuthType"
+                      @change="updateCustomJsonAuth(operation)"
+                    >
+                    <label for="auth-type-posting">Owner</label>
+                  </div>
                 </div>
               </div>
-  
+              <div v-if="operation.type === 'transfer' || operation.type === 'escrow_transfer'">
+                <div>
+                  {{ authStore.state.account?.balance }} - {{ authStore.state.account?.sbd_balance }}
+                </div>
+              </div>
               <button v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)" class="steem-auth-button">
                 Send
               </button>
   
-              <div v-if="operationResults[operation.type]?.success" class="steem-auth-success-message">
-                {{ operationResults[operation.type].success }}
+              <div v-if="transactionStore.results[operation.type]?.success" class="steem-auth-success-message">
+                {{ transactionStore.results[operation.type].success }}
               </div>
-              <div v-if="operationResults[operation.type]?.error" class="steem-auth-error-message">
-                {{ operationResults[operation.type].error }}
+              <div v-if="transactionStore.results[operation.type]?.error" class="steem-auth-error-message">
+                {{ transactionStore.results[operation.type].error }}
               </div>
             </form>
           </div>
@@ -104,7 +151,7 @@
       <ActiveKeyModal 
         v-if="showActiveKeyModal" 
         :show="showActiveKeyModal" 
-        :operation="currentOperation"
+        :operation="currentOperation as any" 
         @close="closeActiveKeyModal" 
         @success="handleSuccess" 
       />
@@ -112,33 +159,34 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, watch } from 'vue';
+  import { ref, watch, onMounted } from 'vue';
   import { useAuthStore } from '../stores/auth';
+  import { useTransactionStore } from '../stores/transaction';
   import TransactionService from '../services/transaction';
   import { operations, type OperationDefinition } from '../utils/operations';
   import ActiveKeyModal from './ActiveKeyModal.vue';
   
-  // Define the extended operation type that includes requiredAuth
-  type ExtendedOperation = {
-    type: string; // We use string since we're dealing with operation types from both echelon and operations
+  // Define the extended operation type that includes requiredAuth and fieldValues
+  interface ExtendedOperation {
+    type: string;
     fields: Record<string, any>;
     requiredAuth: 'active' | 'posting';
     fieldValues: Record<string, any>;
-  };
+  }
   
   const authStore = useAuthStore();
+  const transactionStore = useTransactionStore();
   const loading = ref(false);
   const formValues = ref<Record<string, Record<string, any>>>({});
   const showActiveKeyModal = ref(false);
-  const customJsonAuthType = ref<'posting' | 'active'>('posting'); // Default to posting auth for custom_json
+  const customJsonAuthType = ref<'posting' | 'active' | 'owner'>('posting'); // Updated to include owner
   const jsonErrors = ref<Record<string, string>>({}); // For JSON parsing errors
   const currentOperation = ref<ExtendedOperation>({
     type: 'approve_node',
     fields: {},
     requiredAuth: 'active',
     fieldValues: {}
-  } as ExtendedOperation);
-  const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
+  });
   
   const isoToInputFormat = (isoString: string | number | boolean | object): string => {
     if (typeof isoString !== 'string') return '';
@@ -167,34 +215,47 @@
     });
   };
   
-  // Watch for account changes
-  watch(() => authStore.state.account, (newAccount) => {
-    if (newAccount) {
-      updateFormValues();
-      
-      // Initialize custom_json auth arrays for the current user
-      const customJsonOp = operations.find(op => op.type === 'custom_json');
-      if (customJsonOp) {
-        updateCustomJsonAuth(customJsonOp);
+  // Move initialization to onMounted
+  onMounted(() => {
+    updateFormValues();
+    
+    // Watch for account changes
+    watch(() => authStore.state.account, (newAccount) => {
+      if (newAccount) {
+        updateFormValues();
+        
+        // Initialize custom_json auth arrays for the current user
+        const customJsonOp = operations.find(op => op.type === 'custom_json');
+        if (customJsonOp) {
+          updateCustomJsonAuth(customJsonOp);
+        }
       }
-    }
-  }, { immediate: true });
-  
-  updateFormValues();
+    }, { immediate: true });
+  });
   
   // Add new function to update custom_json auth arrays based on selection
   const updateCustomJsonAuth = (operation: OperationDefinition) => {
-    if (operation.type === 'custom_json') {
+    if (operation.type === 'custom_json' || operation.type === 'custom_binary') {
       // Reset both arrays
       operation.fields.required_auths.value = [];
       operation.fields.required_posting_auths.value = [];
+      if (operation.type === 'custom_binary') {
+        operation.fields.required_owner_auths.value = [];
+        operation.fields.required_active_auths.value = [];
+      }
       
       // Add username to the appropriate array based on selected auth type
       if (customJsonAuthType.value === 'active') {
         operation.fields.required_auths.value = [authStore.state.username];
         // Explicitly set requiredAuth to 'active' to ensure active key is requested
         operation.requiredAuth = 'active';
-      } else {
+      } 
+      else if (customJsonAuthType.value === 'owner' && operation.type === 'custom_binary') {
+        operation.fields.required_owner_auths.value = [authStore.state.username];
+        // Owner auth is treated as active for our component purposes
+        operation.requiredAuth = 'active';
+      }
+      else {
         operation.fields.required_posting_auths.value = [authStore.state.username];
         // Set back to posting for posting auth
         operation.requiredAuth = 'posting';
@@ -213,20 +274,13 @@
       console.log(`Operation requiredAuth after update: ${operation.requiredAuth}`);
     }
   
-    if (operation.requiredAuth === 'active' && authStore.loginAuth === 'steem') {
-      // Convert the operation to the expected type with fieldValues
-      const fieldValues: Record<string, any> = {};
-      
-      // Extract values from fields and put them in fieldValues
-      Object.entries(operation.fields).forEach(([key, field]) => {
-        fieldValues[key] = field.value;
-      });
-      
+    if ((operation.requiredAuth === 'active' || operation.requiredAuth === 'owner') && authStore.loginAuth === 'steem') {
+      // Convert the operation to the expected type
       currentOperation.value = {
         type: operation.type,
         fields: operation.fields,
-        requiredAuth: operation.requiredAuth,
-        fieldValues
+        requiredAuth: operation.requiredAuth === 'owner' ? 'active' : operation.requiredAuth,
+        fieldValues: {}
       };
       
       console.log(`Showing active key modal for ${operation.type} with auth type: ${operation.requiredAuth}`);
@@ -245,20 +299,30 @@
       fields: {},
       requiredAuth: 'active',
       fieldValues: {}
-    } as ExtendedOperation;
+    };
   };
   
   const handleSuccess = (result: any) => {
     if (currentOperation.value) {
-      operationResults.value[currentOperation.value.type] = {
+      transactionStore.results[currentOperation.value.type] = {
         success: `Transaction sent successfully! Transaction ID: ${result.id}`
       };
     }
   };
   
+  interface TransactionResponse {
+    id?: string;
+    result?: {
+      id: string;
+    };
+  }
+
   const send = async (operation: OperationDefinition) => {
     loading.value = true;
-    operationResults.value[operation.type] = {};
+    
+    // Clear previous results for this operation type
+    transactionStore.clearResults(operation.type);
+    
     const tx = {} as any;
     
     // Process all fields
@@ -335,24 +399,39 @@
     console.log('Transaction payload:', tx);
     
     try {
-      const response = await TransactionService.send(operation.type, tx, {
-        requiredAuth: operation.requiredAuth
+      const response = await new Promise<TransactionResponse>((resolve, reject) => {
+        TransactionService.send(operation.type, tx, {
+          requiredAuth: operation.requiredAuth
+        })
+          .then(resolve)
+          .catch(reject);
       });
-  
+
       // Handle different response formats based on auth method
       if (authStore.loginAuth === 'steem') {
-        operationResults.value[operation.type] = {
+        transactionStore.results[operation.type] = {
           success: `Transaction sent successfully! Transaction ID: ${response.id}`
         };
+      } else if (authStore.loginAuth === 'keychain') {
+        // For keychain, we don't get an immediate response
+        transactionStore.results[operation.type] = {
+          success: 'Transaction sent to Keychain for signing. Please check your Keychain extension.'
+        };
       } else {
-        operationResults.value[operation.type] = {
-          success: `Transaction sent successfully! Transaction ID: ${response.result.id}`
+        transactionStore.results[operation.type] = {
+          success: `Transaction sent successfully! Transaction ID: ${response.result?.id}`
         };
       }
     } catch (err) {
-      operationResults.value[operation.type] = {
-        error: err instanceof Error ? err.message : 'Failed to send transaction'
-      };
+      if (err instanceof Error && err.message === 'Please sign the transaction in the new window') {
+        transactionStore.results[operation.type] = {
+          success: 'Please sign the transaction in the new window'
+        };
+      } else {
+        transactionStore.results[operation.type] = {
+          error: err instanceof Error ? err.message : 'Failed to send transaction'
+        };
+      }
     } finally {
       loading.value = false;
     }
@@ -394,4 +473,98 @@
   
   </script>
   
+  <style scoped>
+  /* Existing styles */
+
+  /* Transaction Status Styles */
+  .transaction-status {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .is-pending {
+    background-color: #f8f9fa;
+    border-left: 4px solid #4299e1;
+  }
+
+  .is-success {
+    background-color: #f0fff4;
+    border-left: 4px solid #48bb78;
+  }
+
+  .is-error {
+    background-color: #fff5f5;
+    border-left: 4px solid #f56565;
+  }
+
+  .transaction-pending, .transaction-success, .transaction-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .transaction-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(66, 153, 225, 0.3);
+    border-radius: 50%;
+    border-top-color: #4299e1;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 10px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .transaction-success-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #48bb78;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .transaction-error-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #f56565;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .transaction-id {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 5px;
+    word-break: break-all;
+  }
+
+  .transaction-dismiss {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+
+  .transaction-dismiss:hover {
+    background-color: #edf2f7;
+  }
+  </style>
   
