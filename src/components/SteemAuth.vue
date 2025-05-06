@@ -10,20 +10,20 @@
             <!-- Login Button / User Info -->
             <template v-if="!store.state.isAuthenticated">
                 <button @click="showModal = true" class="steem-auth-button">
-                    <slot name="trigger">
-                        <span>Login to Steem</span>
-                    </slot>
-                </button>
+            <slot name="trigger">
+                <span>Login to Steem</span>
+            </slot>
+        </button>
             </template>
             <template v-else>
                 <div class="steem-auth-user-info">
-                    <slot name="user-info">
+            <slot name="user-info">
                         <div class="steem-auth-user-profile">
                             <button @click="handleLogout" class="steem-auth-button">
-                                <span>Logout</span>
-                            </button>
-                        </div>
-                    </slot>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </slot>
                 </div>
             </template>
         </div>
@@ -247,7 +247,7 @@ const handleSubmit = async (): Promise<void> => {
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
         // Only close the modal for non-Keychain login
         if (!useKeychain.value) {
-            showModal.value = false;
+        showModal.value = false;
         }
     } catch (err: Error | unknown) {
         error.value = err instanceof Error ? err.message : 'Login failed';
@@ -276,12 +276,12 @@ onMounted(() => {
         
         setTimeout(() => {
             hasKeychain.value = checkKeychain();
-        }, 1000);
+    }, 1000);
     }
 
     // Handle SteemLogin callback if enabled
     if (props.enableSteemLogin) {
-        handleSteemLoginCallback();
+    handleSteemLoginCallback();
     }
     
     store.checkUser();

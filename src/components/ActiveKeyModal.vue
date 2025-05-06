@@ -52,6 +52,7 @@ type ExtendedOperation = {
 const props = defineProps<{
   show: boolean;
   operation: ExtendedOperation;
+  isEchelon?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -111,31 +112,52 @@ const handleSubmit = async () => {
     
     console.log('Active key verified successfully.');
 
-    // Build the transaction payload
-    const tx = {} as any;
-    Object.keys(props.operation.fields).forEach((key) => {
-      // Special handling for JSON fields
-      if ((props.operation.type === 'custom_json' && key === 'json') ||
-          (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
-          (key.includes('json_meta'))) {
-        
-        if (typeof props.operation.fieldValues[key] !== 'string') {
-          tx[key] = JSON.stringify(props.operation.fieldValues[key]);
+    let tx: any;
+    let opType = props.operation.type;
+
+    if (props.isEchelon) {
+      // Wrap in custom_json for Steem
+      opType = 'custom_json';
+      tx = {
+        required_auths: [authStore.state.username],
+        required_posting_auths: [],
+        id: 'sidechain',
+        json: JSON.stringify({
+          contract: props.operation.type,
+          payload: Object.fromEntries(
+            Object.entries(props.operation.fields).map(([key]) => [
+              key,
+              props.operation.fieldValues[key]
+            ])
+          )
+        })
+      };
+    } else {
+      // Native Steem op, build as before
+      tx = {};
+      Object.keys(props.operation.fields).forEach((key) => {
+        // Special handling for JSON fields
+        if ((props.operation.type === 'custom_json' && key === 'json') ||
+            (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
+            (key.includes('json_meta'))) {
+          if (typeof props.operation.fieldValues[key] !== 'string') {
+            tx[key] = JSON.stringify(props.operation.fieldValues[key]);
+          } else {
+            tx[key] = props.operation.fieldValues[key];
+          }
         } else {
           tx[key] = props.operation.fieldValues[key];
         }
-      } else {
-        tx[key] = props.operation.fieldValues[key];
-      }
-    });
+      });
+    }
 
     console.log('Sending transaction with payload:', tx);
-    console.log('Operation type:', props.operation.type);
+    console.log('Operation type:', opType);
     console.log('Required auth:', props.operation.requiredAuth);
 
     // Send the transaction
     const result = await TransactionService.send(
-      props.operation.type,
+      opType,
       tx,
       { requiredAuth: 'active', activeKey: activeKey.value }
     );

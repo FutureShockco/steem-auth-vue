@@ -45,7 +45,7 @@
               </div>
             </div>
 
-            <button v-if="authStore.state.isAuthenticated" @click="handleOperation(operation)" class="steem-auth-button">
+            <button v-if="authStore.state.isAuthenticated" class="steem-auth-button">
               Send
             </button>
 
@@ -60,12 +60,29 @@
       </div>
     </div>
 
+    <div class="steem-auth-transaction-history" v-if="transactionStore.transactions.length">
+      <h3>Transaction History</h3>
+      <ul>
+        <li v-for="tx in transactionStore.transactions" :key="tx.transactionId" class="steem-auth-transaction-history-item">
+          <strong>{{ tx.type }}</strong>
+          <span>({{ new Date(tx.timestamp).toLocaleString() }})</span>
+          <span>Status: <b :class="`tx-status-${tx.status}`">{{ tx.status }}</b></span>
+          <span>{{ tx }}</span>
+          <span v-if="tx.message">- {{ tx.message }}</span>
+          <span v-if="tx.errorMessage" class="steem-auth-error-message">- {{ tx.errorMessage }}</span>
+          <button @click="transactionStore.deleteTransaction(tx.transactionId)" class="steem-auth-button steem-auth-button-small">Delete</button>
+        </li>
+      </ul>
+    </div>
+
     <ActiveKeyModal 
       v-if="showActiveKeyModal" 
       :show="showActiveKeyModal" 
       :operation="currentOperation"
       @close="closeActiveKeyModal" 
       @submit="handleActiveKeySubmit" 
+      :isEchelon="true"
+      @success="handleActiveKeySuccess"
     />
   </div>
 </template>
@@ -76,6 +93,7 @@ import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 import { operations, type OperationDefinition, getDefaultValueForType } from '../utils/echelon';
 import ActiveKeyModal from './ActiveKeyModal.vue';
+import { useTransactionStore } from '../stores/transaction';
 
 // Define form value types to match FieldDefinition
 type FormValue = string | number | boolean | object | any[] | null | undefined;
@@ -103,6 +121,7 @@ const currentOperation = ref<ExtendedOperation>({
   fieldValues: {}
 });
 const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
+const transactionStore = useTransactionStore();
 
 const updateFormValues = () => {
   operations.forEach(operation => {
@@ -202,8 +221,11 @@ const handleActiveKeySubmit = async (activeKey: string) => {
       activeKey
     });
 
+    // Get transaction ID from response.id or response.result.id
+    const txId = response.id || (response.result && response.result.id);
+
     operationResults.value[currentOperation.value.type] = {
-      success: `Operation sent successfully! Transaction ID: ${response.id}`
+      success: `Operation sent successfully!${txId ? ' Transaction ID: ' + txId : ''}`
     };
     closeActiveKeyModal();
   } catch (err) {
@@ -211,6 +233,15 @@ const handleActiveKeySubmit = async (activeKey: string) => {
       error: err instanceof Error ? err.message : 'Failed to send operation'
     };
   }
+};
+
+const handleActiveKeySuccess = (result: any) => {
+  // Get transaction ID from result.id or result.result.id
+  const txId = result.id || (result.result && result.result.id);
+  operationResults.value[currentOperation.value.type] = {
+    success: `Operation sent successfully!${txId ? ' Transaction ID: ' + txId : ''}`
+  };
+  // Optionally close the modal here if not already closed
 };
 
 const send = async (operation: OperationDefinition) => {
@@ -259,8 +290,11 @@ const send = async (operation: OperationDefinition) => {
       requiredAuth: 'active'
     });
 
+    // Get transaction ID from response.id or response.result.id
+    const txId = response.id || (response.result && response.result.id);
+
     operationResults.value[operation.type] = {
-      success: `Operation sent successfully! Transaction ID: ${response.id}`
+      success: `Operation sent successfully!${txId ? ' Transaction ID: ' + txId : ''}`
     };
   } catch (err) {
     operationResults.value[operation.type] = {

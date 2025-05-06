@@ -11,13 +11,26 @@ export interface TransactionState {
   successMessage: string;
 }
 
+export interface TransactionRecord {
+  transactionId: string;
+  type: string;
+  status: 'pending' | 'success' | 'error';
+  timestamp: number;
+  message: string;
+  errorMessage?: string;
+}
+
 export interface TransactionStore {
   state: TransactionState;
   results: Record<string, { success?: string; error?: string }>;
+  transactions: TransactionRecord[];
   startTransaction: (type: string, pendingMessage?: string) => void;
   finishTransaction: (success: boolean, transactionId?: string, successMessage?: string, errorMessage?: string) => void;
   resetState: () => void;
   clearResults: (type?: string) => void;
+  saveTransaction: (record: TransactionRecord) => void;
+  getTransactions: () => TransactionRecord[];
+  deleteTransaction: (transactionId: string) => void;
 }
 
 const defaultState: TransactionState = {
@@ -35,6 +48,8 @@ const createTransactionStore = (): TransactionStore => {
   const state = reactive<TransactionState>({...defaultState});
   // Store results for each specific operation type
   const results = reactive<Record<string, { success?: string; error?: string }>>({});
+  // Store all transactions
+  const transactions = reactive<TransactionRecord[]>([]);
 
   const startTransaction = (type: string, pendingMessage = 'Transaction sent to Keychain for signing. Please check your Keychain extension.') => {
     state.isPending = true;
@@ -70,6 +85,15 @@ const createTransactionStore = (): TransactionStore => {
         results[state.type] = { error: errorMessage };
       }
     }
+    // Save transaction to history
+    saveTransaction({
+      transactionId: transactionId || Date.now().toString(),
+      type: state.type,
+      status: success ? 'success' : 'error',
+      timestamp: Date.now(),
+      message: success ? successMessage : '',
+      errorMessage: !success ? errorMessage : undefined
+    });
   };
 
   const resetState = () => {
@@ -88,13 +112,31 @@ const createTransactionStore = (): TransactionStore => {
     }
   };
 
+  // Save a transaction record
+  const saveTransaction = (record: TransactionRecord) => {
+    transactions.unshift(record); // Add to the beginning for most-recent-first
+  };
+
+  // Get all transactions
+  const getTransactions = () => transactions;
+
+  // Delete a transaction by ID
+  const deleteTransaction = (transactionId: string) => {
+    const idx = transactions.findIndex(t => t.transactionId === transactionId);
+    if (idx !== -1) transactions.splice(idx, 1);
+  };
+
   return {
     state: readonly(state) as TransactionState,
     results,
+    transactions,
     startTransaction,
     finishTransaction,
     resetState,
-    clearResults
+    clearResults,
+    saveTransaction,
+    getTransactions,
+    deleteTransaction
   };
 };
 
