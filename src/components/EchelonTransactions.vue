@@ -7,56 +7,67 @@
     </div>
 
     <div v-else class="steem-auth-transactions-content">
-      <div class="steem-auth-transaction-item" v-for="operation in operations" :key="operation.type">
-        <div>
-          <h3>{{ operation.type }}</h3>
-          <form @submit.prevent="handleOperation(operation)" class="steem-auth-transaction-form">
-            <div class="form-group" v-for="(fieldDef, field, index) in operation.fields" :key="field">
-              <div v-if="fieldDef.type === 'string' || fieldDef.type === 'number'">
-                <label :for="field.toString() + index">{{ field }}</label>
-                <input 
-                  :id="field.toString() + index" 
-                  :type="fieldDef.type" 
-                  class="steem-auth-input"
-                  v-model="inputValues[operation.type][field]"
-                />
-              </div>
-              <div v-else-if="fieldDef.type === 'json' || fieldDef.type === 'array'">
-                <label :for="field.toString() + index">{{ field }}</label>
-                <textarea 
-                  :id="field.toString() + index"
-                  class="steem-auth-input"
-                  v-model="inputValues[operation.type][field] as string"
-                  rows="4"
-                  :placeholder="`Enter ${fieldDef.type} in JSON format`"
-                ></textarea>
-              </div>
-              <div v-else-if="fieldDef.type === 'boolean'" class="d-flex mx-1" :data-trigger-switch="field.toString() + index">
-                <div class="align-self-center">
-                  <h6 class="mb-0 font-12">{{ field }}</h6>
-                </div>
-                <div class="ms-auto align-self-center">
-                  <div class="form-switch android-switch switch-blue switch-s">
-                    <input type="checkbox" class="android-input" :id="field.toString() + index"
-                      v-model="inputValues[operation.type][field]">
-                    <label class="custom-control-label" :for="field.toString() + index"></label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button v-if="authStore.state.isAuthenticated" class="steem-auth-button">
-              Send
-            </button>
-
-            <div v-if="operationResults[operation.type]?.success" class="steem-auth-success-message">
-              {{ operationResults[operation.type].success }}
-            </div>
-            <div v-if="operationResults[operation.type]?.error" class="steem-auth-error-message">
-              {{ operationResults[operation.type].error }}
-            </div>
-          </form>
+      <div v-for="operation in operations" :key="operation.type" class="operation-block">
+        <div class="operation-header">
+          <span class="operation-label">{{ operation.label }}</span>
+          <span class="operation-tooltip" v-if="operation.description">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-content">{{ operation.description }}</span>
+          </span>
         </div>
+        <form @submit.prevent="handleOperation(operation)" class="steem-auth-transaction-form">
+          <div class="form-group" v-for="([field, fieldDef], index) in Object.entries(operation.fields)" :key="operation.type + '-' + field + '-' + index">
+            <label :for="field + String(index)">{{ fieldDef.label || field }}</label>
+            <template v-if="fieldDef.type === 'string'">
+              <input
+                :id="field + String(index)"
+                type="text"
+                class="steem-auth-input"
+                v-model="inputValues[operation.type][field]"
+                :required="fieldDef.required"
+              />
+            </template>
+            <template v-else-if="fieldDef.type === 'number'">
+              <input
+                :id="field + String(index)"
+                type="number"
+                class="steem-auth-input"
+                v-model.number="inputValues[operation.type][field]"
+                :required="fieldDef.required"
+              />
+            </template>
+            <template v-else-if="fieldDef.type === 'boolean'">
+              <input
+                :id="field + String(index)"
+                type="checkbox"
+                :checked="!!inputValues[operation.type][field]"
+                @change="onCheckboxChange($event, operation.type, field)"
+              />
+            </template>
+            <template v-else-if="fieldDef.type === 'json' || fieldDef.type === 'array'">
+              <textarea
+                :id="field + String(index)"
+                class="steem-auth-input"
+                v-model.trim="(inputValues[operation.type][field] as string)"
+                :required="fieldDef.required"
+              />
+            </template>
+          </div>
+
+          <button v-if="authStore.state.isAuthenticated" class="steem-auth-button">
+            Send
+          </button>
+
+          <div v-if="pendingOperationType === operation.type && pendingMessage" class="steem-auth-success-message">
+            {{ pendingMessage }}
+          </div>
+          <div v-if="operationResults[operation.type]?.success" class="steem-auth-success-message">
+            {{ operationResults[operation.type].success }}
+          </div>
+          <div v-if="operationResults[operation.type]?.error" class="steem-auth-error-message">
+            {{ operationResults[operation.type].error }}
+          </div>
+        </form>
       </div>
     </div>
 
@@ -91,7 +102,7 @@
 import { ref, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
-import { operations, type OperationDefinition, getDefaultValueForType } from '../utils/echelon';
+import { operations, type OperationDefinition, FieldDefinition } from '../utils/echelonOperations';
 import ActiveKeyModal from './ActiveKeyModal.vue';
 import { useTransactionStore } from '../stores/transaction';
 
@@ -107,6 +118,8 @@ type InputValues = Record<string, Record<string, InputValue>>;
 type ExtendedOperation = OperationDefinition & {
   requiredAuth: 'active' | 'posting';
   fieldValues: Record<string, FormValue>;
+  label: string;
+  description: string;
 };
 
 const authStore = useAuthStore();
@@ -118,13 +131,17 @@ const currentOperation = ref<ExtendedOperation>({
   type: 'approve_node',
   fields: {},
   requiredAuth: 'active',
-  fieldValues: {}
+  fieldValues: {},
+  label: 'Approve Node',
+  description: 'Approve a node to participate in the network.'
 });
 const operationResults = ref<Record<string, { success?: string; error?: string }>>({});
+const pendingOperationType = ref<string | null>(null);
+const pendingMessage = ref<string>('');
 const transactionStore = useTransactionStore();
 
 const updateFormValues = () => {
-  operations.forEach(operation => {
+  operations.forEach((operation: OperationDefinition) => {
     formValues.value[operation.type] = {};
     inputValues.value[operation.type] = {};
     Object.keys(operation.fields).forEach(field => {
@@ -132,9 +149,9 @@ const updateFormValues = () => {
         formValues.value[operation.type][field] = authStore.state.username;
         inputValues.value[operation.type][field] = authStore.state.username;
       } else {
-        const defaultValue = getDefaultValueForType(operation.fields[field].type);
-        formValues.value[operation.type][field] = defaultValue;
-        inputValues.value[operation.type][field] = defaultValue as InputValue;
+        const fieldDef = operation.fields[field];
+        formValues.value[operation.type][field] = fieldDef.value;
+        inputValues.value[operation.type][field] = fieldDef.value as InputValue;
       }
     });
   });
@@ -171,7 +188,9 @@ const closeActiveKeyModal = () => {
     type: 'approve_node',
     fields: {},
     requiredAuth: 'active',
-    fieldValues: {}
+    fieldValues: {},
+    label: 'Approve Node',
+    description: 'Approve a node to participate in the network.'
   } as ExtendedOperation;
 };
 
@@ -199,7 +218,7 @@ const handleActiveKeySubmit = async (activeKey: string) => {
     };
 
     // Add all field values to the payload
-    Object.entries(currentOperation.value.fields).forEach(([field, fieldDef]) => {
+    Object.entries(currentOperation.value.fields).forEach(([field, fieldDef]: [string, FieldDefinition]) => {
       if (field !== 'contract') { // Skip the contract field as it's already in the structure
         try {
           // Try to parse JSON fields
@@ -221,6 +240,9 @@ const handleActiveKeySubmit = async (activeKey: string) => {
       activeKey
     });
 
+    pendingOperationType.value = null;
+    pendingMessage.value = '';
+
     // Get transaction ID from response.id or response.result.id
     const txId = response.id || (response.result && response.result.id);
 
@@ -229,6 +251,8 @@ const handleActiveKeySubmit = async (activeKey: string) => {
     };
     closeActiveKeyModal();
   } catch (err) {
+    pendingOperationType.value = null;
+    pendingMessage.value = '';
     operationResults.value[currentOperation.value.type] = {
       error: err instanceof Error ? err.message : 'Failed to send operation'
     };
@@ -247,6 +271,11 @@ const handleActiveKeySuccess = (result: any) => {
 const send = async (operation: OperationDefinition) => {
   loading.value = true;
   operationResults.value[operation.type] = {};
+
+  if (authStore.loginAuth === 'keychain') {
+    pendingOperationType.value = operation.type;
+    pendingMessage.value = 'Transaction sent to Keychain for signing. Please check your Keychain extension.';
+  }
 
   try {
     // Construct the custom_json payload
@@ -269,7 +298,7 @@ const send = async (operation: OperationDefinition) => {
     };
 
     // Add all field values to the payload
-    Object.entries(operation.fields).forEach(([field, fieldDef]) => {
+    Object.entries(operation.fields).forEach(([field, fieldDef]: [string, FieldDefinition]) => {
       if (field !== 'contract') { // Skip the contract field as it's already in the structure
         try {
           // Try to parse JSON fields
@@ -290,6 +319,9 @@ const send = async (operation: OperationDefinition) => {
       requiredAuth: 'active'
     });
 
+    pendingOperationType.value = null;
+    pendingMessage.value = '';
+
     // Get transaction ID from response.id or response.result.id
     const txId = response.id || (response.result && response.result.id);
 
@@ -297,6 +329,8 @@ const send = async (operation: OperationDefinition) => {
       success: `Operation sent successfully!${txId ? ' Transaction ID: ' + txId : ''}`
     };
   } catch (err) {
+    pendingOperationType.value = null;
+    pendingMessage.value = '';
     operationResults.value[operation.type] = {
       error: err instanceof Error ? err.message : 'Failed to send operation'
     };
@@ -304,4 +338,62 @@ const send = async (operation: OperationDefinition) => {
     loading.value = false;
   }
 };
-</script> 
+
+// Checkbox change handler for type safety
+function onCheckboxChange(event: Event, opType: string, field: string) {
+  const target = event.target as HTMLInputElement | null;
+  if (target) {
+    inputValues.value[opType][field] = target.checked;
+  }
+}
+</script>
+
+<style scoped>
+.operation-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+.operation-label {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-right: 0.5em;
+}
+.operation-tooltip {
+  position: relative;
+  display: inline-block;
+}
+.tooltip-icon {
+  background: #eee;
+  border-radius: 50%;
+  width: 1.2em;
+  height: 1.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  cursor: pointer;
+  margin-left: 0.2em;
+}
+.tooltip-content {
+  visibility: hidden;
+  width: 220px;
+  background: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 4px;
+  padding: 0.5em;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 0.95em;
+}
+.operation-tooltip:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+}
+</style> 

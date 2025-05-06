@@ -42,7 +42,7 @@ import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 
 // Define the extended operation type that includes field values
-type ExtendedOperation = {
+export type ExtendedOperation = {
   type: string;
   fields: Record<string, any>;
   requiredAuth: 'active' | 'posting';

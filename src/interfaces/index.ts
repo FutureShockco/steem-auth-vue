@@ -84,6 +84,7 @@ export interface IAccount {
     witness_votes: string[];
     tags_usage: any[];
     guest_bloggers: any[];
+    encryptedPk?: string;
 } 
 
 export interface ITransaction {

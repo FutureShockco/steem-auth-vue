@@ -42,7 +42,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 // @ts-ignore - Ignore the import error for the built package in development
-import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
+//import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
+import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../src/index';
+
 import '../dist/style.css';
 
 const activeTab = ref('steem');

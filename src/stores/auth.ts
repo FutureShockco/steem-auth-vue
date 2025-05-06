@@ -4,7 +4,14 @@ import { IAccount } from '../interfaces';
 import AccountService from '../services/account';
 import client from '../helpers/client';
 import { PrivateKey } from 'dsteem';
-import EncryptionService from '../services/encryption';
+import { EncryptionService } from '../services/encryption';
+
+interface StoredAccount {
+    username: string;
+    loginAuth: 'steem' | 'keychain' | 'steemlogin';
+    accessToken?: string;
+    encryptedPk?: string;
+}
 
 interface AuthState {
     isAuthenticated: boolean;
@@ -13,18 +20,23 @@ interface AuthState {
     loginAuth: 'steem' | 'keychain' | 'steemlogin';
     appName: string;
     callbackURL: string;
+    accounts: StoredAccount[];
 }
 
 interface AuthStore {
     state: AuthState;
     slogin: (access_token: string) => Promise<void>;
     logout: () => void;
-    handleLogin: (username: string, keychainLogin: boolean, posting_key?: string) => Promise<void>;
+    handleLogin: (username: string, keychainLogin: boolean, posting_key?: string, pin?: string) => Promise<void>;
     checkUser: () => Promise<void>;
     validatePostingKey: (username: string, postingKey: string) => Promise<boolean>;
     setConfig: (appName: string, callbackURL: string) => void;
+    addAccount: (account: StoredAccount) => void;
+    removeAccount: (username: string) => void;
+    switchAccount: (username: string) => Promise<void>;
     get username(): string;
     get loginAuth(): 'steem' | 'keychain' | 'steemlogin';
+    get accounts(): StoredAccount[];
 }
 
 const createAuthStore = (): AuthStore => {
@@ -34,7 +46,8 @@ const createAuthStore = (): AuthStore => {
         account: null,
         loginAuth: 'steem',
         appName: import.meta.env.VITE_APP_NAME || '',
-        callbackURL: import.meta.env.VITE_CALLBACK_URL || ''
+        callbackURL: import.meta.env.VITE_CALLBACK_URL || '',
+        accounts: []
     });
 
     const validatePostingKey = async (username: string, postingKey: string): Promise<boolean> => {
@@ -71,6 +84,7 @@ const createAuthStore = (): AuthStore => {
                 localStorage.setItem(state.appName + '-access_token', access_token);
                 localStorage.setItem(state.appName + '-login_auth', 'steemlogin');
                 localStorage.setItem(state.appName + '-auth_name', state.username);
+                addAccount({ username: user.name, loginAuth: 'steemlogin', accessToken: access_token });
             } catch (error) {
                 console.error('SteemLogin error:', error);
                 localStorage.removeItem('access_token');
@@ -92,7 +106,7 @@ const createAuthStore = (): AuthStore => {
         localStorage.removeItem(state.appName + '-encryptedpk');
     };
 
-    const handleLogin = async (username: string, keychainLogin: boolean, posting_key?: string) => {
+    const handleLogin = async (username: string, keychainLogin: boolean, posting_key?: string, pin?: string) => {
         try {
             const user = await AccountService.find(username) as unknown as IAccount;
 
@@ -112,7 +126,7 @@ const createAuthStore = (): AuthStore => {
                                 state.loginAuth = 'keychain';
                                 state.account = user;
                                 state.username = user.name;
-                                // Force a state update by triggering a checkUser
+                                addAccount({ username, loginAuth: 'keychain' });
                                 checkUser();
                             } else {
                                 console.log("Signing failed:", response.message);
@@ -136,11 +150,12 @@ const createAuthStore = (): AuthStore => {
                     throw new Error('Invalid posting key');
                 }
 
-                // Generate encryption key using username and posting key as password
-                await EncryptionService.generateEncryptionKey(username, posting_key);
-
-                // Encrypt and store the posting key
-                await EncryptionService.encryptAndStorePrivateKey(posting_key);
+                // Generate encryption key using username and PIN
+                await EncryptionService.generatePinKey(username, pin!);
+                const encryptedPk = await EncryptionService.encryptAndReturnPrivateKey(posting_key);
+                if (!encryptedPk) {
+                    throw new Error('Failed to encrypt posting key.');
+                }
 
                 state.isAuthenticated = true;
                 state.account = user;
@@ -148,6 +163,7 @@ const createAuthStore = (): AuthStore => {
                 state.loginAuth = 'steem';
                 localStorage.setItem(state.appName + '-login_auth', 'steem');
                 localStorage.setItem(state.appName + '-auth_name', username);
+                addAccount({ username, loginAuth: 'steem', encryptedPk });
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -156,30 +172,64 @@ const createAuthStore = (): AuthStore => {
     };
 
     const checkUser = async () => {
+        loadAccounts();
         const loginAuth = localStorage.getItem(state.appName + '-login_auth');
-        if (loginAuth) {
-            if (loginAuth === 'steemlogin') {
-                const token = localStorage.getItem(state.appName + '-access_token') || '';
-                await slogin(token);
-            } else {
-                const username = localStorage.getItem(state.appName + '-auth_name') || '';
-                try {
-                    const user = await AccountService.find(username) as unknown as IAccount;
-                    state.isAuthenticated = true;
-                    state.loginAuth = loginAuth as 'steem' | 'keychain' | 'steemlogin';
-                    state.account = user;
-                    state.username = username;
-                } catch (error) {
-                    console.error('Check user error:', error);
-                    logout();
-                }
-            }
+        const username = localStorage.getItem(state.appName + '-auth_name') || '';
+        if (loginAuth && username) {
+            await switchAccount(username);
         }
     };
 
     const setConfig = (appName: string, callbackURL: string) => {
         state.appName = appName;
         state.callbackURL = callbackURL;
+    };
+
+    const persistAccounts = () => {
+        localStorage.setItem(state.appName + '-accounts', JSON.stringify(state.accounts));
+    };
+
+    const loadAccounts = () => {
+        const raw = localStorage.getItem(state.appName + '-accounts');
+        if (raw) {
+            try {
+                state.accounts = JSON.parse(raw);
+            } catch (e) {
+                state.accounts = [];
+            }
+        } else {
+            state.accounts = [];
+        }
+    };
+
+    const addAccount = (account: StoredAccount) => {
+        if (!state.accounts.find(a => a.username === account.username)) {
+            state.accounts.push(account);
+            persistAccounts();
+        }
+    };
+
+    const removeAccount = (username: string) => {
+        state.accounts = state.accounts.filter(a => a.username !== username);
+        persistAccounts();
+    };
+
+    const switchAccount = async (username: string) => {
+        // Clear encryption key on account switch
+        EncryptionService.setEncryptionKey(null);
+        const accountMeta = state.accounts.find(a => a.username === username);
+        if (!accountMeta) return;
+        state.loginAuth = accountMeta.loginAuth;
+        state.username = accountMeta.username;
+        if (accountMeta.loginAuth === 'steemlogin' && accountMeta.accessToken) {
+            await slogin(accountMeta.accessToken);
+        } else {
+            const user = await AccountService.find(username) as unknown as IAccount;
+            state.account = user;
+            state.isAuthenticated = true;
+        }
+        localStorage.setItem(state.appName + '-auth_name', username);
+        localStorage.setItem(state.appName + '-login_auth', accountMeta.loginAuth);
     };
 
     return {
@@ -190,11 +240,17 @@ const createAuthStore = (): AuthStore => {
         checkUser,
         validatePostingKey,
         setConfig,
+        addAccount,
+        removeAccount,
+        switchAccount,
         get username() {
             return state.username;
         },
         get loginAuth() {
             return state.loginAuth;
+        },
+        get accounts() {
+            return state.accounts;
         }
     };
 };
@@ -212,4 +268,6 @@ export const provideAuthStore = () => {
 export const useAuthStore = () => {
     const store = inject<AuthStore>(authStoreSymbol);
     return store || defaultStore;
-}; 
+};
+
+export type { AuthStore }; 
