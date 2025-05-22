@@ -3,22 +3,22 @@
         <!-- Button Group (Theme Toggle + Login/User Info) -->
         <div class="steem-auth-container" :class="{ 'steem-auth--dark': isDarkTheme }">
             <!-- Theme Toggle Button -->
-            <button class="steem-auth-theme-toggle" @click="toggleTheme" type="button"
-                :title="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'">
+            <button v-if="props.displayDarkModeToggle" class="steem-auth-theme-toggle" @click="toggleTheme"
+                type="button" :title="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'">
                 {{ isDarkTheme ? '☀️' : '🌙' }}
             </button>
 
             <!-- Login Button / User Info -->
             <template v-if="!store.state.isAuthenticated">
                 <button @click="openLoginModal" class="steem-auth-button">
-                    <slot name="trigger">
+            <slot name="trigger">
                         <span>Login</span>
-                    </slot>
-                </button>
+            </slot>
+        </button>
             </template>
             <template v-else>
                 <div class="steem-auth-user-info">
-                    <slot name="user-info">
+            <slot name="user-info">
                         <div class="steem-auth-user-profile">
                             <div class="steem-auth-dropdown-wrapper">
                                 <button class="steem-auth-button" @click="showDropdown = !showDropdown">
@@ -35,9 +35,9 @@
                                                 :disabled="acc.username === store.state.username"
                                                 @click="switchAccountFromDropdown(acc.username)">
                                                 {{ acc.username }} ({{ acc.loginAuth }})
-                                            </button>
-                                        </div>
-                                    </div>
+                    </button>
+                </div>
+        </div>
                                     <button class="steem-auth-dropdown-item" @click="openAddAccountModal">
                                         Add Account
                                     </button>
@@ -48,54 +48,32 @@
                                     <button class="steem-auth-dropdown-item steem-auth-button-danger"
                                         @click="handleLogout">
                                         Logout
-                                    </button>
-                                </div>
-                            </div>
+                        </button>
                         </div>
+                            </div>
+                            </div>
                     </slot>
                 </div>
             </template>
         </div>
 
         <!-- Login Modal -->
-        <LoginModal
-            :visible="showModal"
-            :loading="loading"
-            :error="error"
-            :username="username"
-            :postingKey="postingKey"
-            :useKeychain="useKeychain"
-            :hasKeychain="hasKeychain"
-            :usernameError="usernameError"
-            :postingKeyError="postingKeyError"
-            :enableSteemLogin="enableSteemLogin"
-            :enableDirectLogin="enableDirectLogin"
-            :enableKeychain="enableKeychain"
-            :addingAccount="addingAccount"
-            :loginAuth="store.state.loginAuth"
-            :currentUsername="store.state.username"
-            :accounts="store.accounts"
-            @close="showModal = false"
-            @submit="handleSubmit"
-            @steemlogin="handleSteemLogin"
-            @update:username="username = $event"
-            @update:postingKey="postingKey = $event"
-            @update:useKeychain="useKeychain = $event"
-            @auto-login="handleAutoLogin"
-        />
+        <LoginModal :visible="showModal" :loading="loading" :error="error" :username="username" :postingKey="postingKey"
+            :useKeychain="useKeychain" :hasKeychain="hasKeychain" :usernameError="usernameError"
+            :postingKeyError="postingKeyError" :enableSteemLogin="enableSteemLogin"
+            :enableDirectLogin="enableDirectLogin" :enableKeychain="enableKeychain" :addingAccount="addingAccount"
+            :loginAuth="store.state.loginAuth" :currentUsername="store.state.username" :accounts="store.accounts"
+            @close="showModal = false" @submit="handleSubmit" @steemlogin="handleSteemLogin"
+            @update:username="username = $event" @update:postingKey="postingKey = $event"
+            @update:useKeychain="useKeychain = $event" @auto-login="handleAutoLogin" />
 
         <ManageAccountsModal v-if="showManageAccountsModal && store.state.isAuthenticated"
             :visible="showManageAccountsModal" :accounts="store.accounts" :currentUsername="store.state.username"
             @close="handleManageAccountsClose" @switch="handleManageAccountsSwitch"
             @delete="handleManageAccountsDelete" />
 
-        <PinModal
-            v-if="showPinModal"
-            :show="showPinModal"
-            :mode="pinMode"
-            @close="handlePinClose"
-            @submit="handlePinSubmit"
-        />
+        <PinModal v-if="showPinModal" :show="showPinModal" :mode="pinMode" @close="handlePinClose"
+            @submit="handlePinSubmit" />
 
         <slot :requestActiveKey="requestActiveKey"></slot>
         <ActiveKeyModal v-if="showActiveKeyModal && pendingOperation" :show="showActiveKeyModal"
@@ -115,10 +93,12 @@ import { EncryptionService } from '../services/encryption';
 import type { ExtendedOperation } from './ActiveKeyModal.vue';
 import type { AuthStore } from '../stores/auth';
 import { setPinRequestHandler } from '../services/transaction';
+import { initClient } from '@/helpers/client';
 
 // Define configuration props with defaults
 const props = withDefaults(defineProps<{
     // Auth method configuration
+    displayDarkModeToggle?: boolean;
     enableSteemLogin?: boolean;
     enableKeychain?: boolean;
     enableDirectLogin?: boolean;
@@ -126,6 +106,8 @@ const props = withDefaults(defineProps<{
     defaultDarkMode?: boolean;
     appName: string;
     callbackURL: string;
+    steemApi?: string;
+    steemApiOptions?: object;
 }>(), {
     enableSteemLogin: true,
     enableKeychain: true,
@@ -157,8 +139,11 @@ const showDropdown = ref(false);
 const addingAccount = ref(false);
 const showManageAccountsModal = ref(false);
 const showPinModal = ref(false);
-const pinMode = ref<'set'|'unlock'>('set');
+const pinMode = ref<'set' | 'unlock'>('set');
 const pendingPinCallback = ref<null | ((pin: string) => void)>(null);
+
+// Add isClient ref to track client-side rendering
+const isClient = ref(false);
 
 const checkKeychain = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -167,11 +152,14 @@ const checkKeychain = (): boolean => {
 };
 
 const handleSteemLogin = (): void => {
-    const client = getSteemLoginClient();
-    window.location.href = client.getLoginURL();
+    if (typeof window !== 'undefined') {
+        const client = getSteemLoginClient();
+        window.location.href = client.getLoginURL();
+    }
 };
 
 const handleSteemLoginCallback = (): void => {
+    if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
     const username = urlParams.get('username');
@@ -259,7 +247,7 @@ const handleSubmit = async (): Promise<void> => {
         }
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
         if (!useKeychain.value) {
-            showModal.value = false;
+        showModal.value = false;
         }
     } catch (err: Error | unknown) {
         error.value = err instanceof Error ? err.message : 'Login failed';
@@ -274,40 +262,46 @@ const handleLogout = (): void => {
 };
 
 // Watch for prop changes and update store
-watch(() => [props.appName, props.callbackURL], ([newAppName, newCallbackURL]) => {
-    store.setConfig(newAppName, newCallbackURL);
+watch(() => [props.appName, props.callbackURL, props.steemApi, props.steemApiOptions], ([newAppName, newCallbackURL, newSteemApi, newSteemApiOptions]) => {
+    const safeSteemApi = typeof newSteemApi === 'string' ? newSteemApi : undefined;
+    const safeSteemApiOptions = (newSteemApiOptions && typeof newSteemApiOptions === 'object' && !Array.isArray(newSteemApiOptions)) ? newSteemApiOptions : undefined;
+    initClient(safeSteemApi, safeSteemApiOptions);
+    const safeAppName = typeof newAppName === 'string' ? newAppName : '';
+    const safeCallbackURL = typeof newCallbackURL === 'string' ? newCallbackURL : '';
+    store.setConfig(safeAppName, safeCallbackURL);
+    configureSteemLogin(safeAppName, safeCallbackURL);
 }, { immediate: true });
 
 onMounted(() => {
+    isClient.value = true;
     // Initialize theme
     initTheme();
 
     // Only check for keychain if it's enabled
     if (props.enableKeychain) {
+    hasKeychain.value = checkKeychain();
+    
+    setTimeout(() => {
         hasKeychain.value = checkKeychain();
-
-        setTimeout(() => {
-            hasKeychain.value = checkKeychain();
-        }, 1000);
+    }, 1000);
     }
 
     // Handle SteemLogin callback if enabled
     if (props.enableSteemLogin) {
-        handleSteemLoginCallback();
+    handleSteemLoginCallback();
     }
 
     store.checkUser();
 
-    // Configure steemlogin when component is mounted
-    configureSteemLogin(store.state.appName, store.state.callbackURL);
-
     // Hide dropdown on outside click
-    document.addEventListener('click', (e) => {
-        const dropdown = document.querySelector('.steem-auth-dropdown-wrapper');
-        if (dropdown && !dropdown.contains(e.target as Node)) {
-            showDropdown.value = false;
-        }
-    });
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', (e) => {
+            const dropdown = document.querySelector('.steem-auth-dropdown-wrapper');
+            if (dropdown && !dropdown.contains(e.target as Node)) {
+                showDropdown.value = false;
+            }
+        });
+    }
 
     setPinRequestHandler((username, callback) => {
         console.log('[PIN HANDLER] Showing PIN modal for user:', username);
@@ -325,12 +319,16 @@ onMounted(() => {
 const THEME_STORAGE_KEY = 'steem-auth-theme';
 
 const applyTheme = (isDark: boolean) => {
-    if (isDark) {
-        document.documentElement.classList.add('dark-theme');
-    } else {
-        document.documentElement.classList.remove('dark-theme');
+    if (typeof document !== 'undefined') {
+        if (isDark) {
+            document.documentElement.classList.add('dark-theme');
+        } else {
+            document.documentElement.classList.remove('dark-theme');
+        }
     }
-    localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+    if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+    }
     emit('theme-change', isDark);
 };
 
@@ -340,6 +338,7 @@ const toggleTheme = () => {
 };
 
 const initTheme = () => {
+    if (typeof window === 'undefined') return;
     // Check if theme is stored in localStorage
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (storedTheme) {
@@ -355,13 +354,15 @@ const initTheme = () => {
     applyTheme(isDarkTheme.value);
 
     // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        // Only auto-change if user hasn't manually set a theme
-        if (!localStorage.getItem(THEME_STORAGE_KEY)) {
-            isDarkTheme.value = e.matches;
-            applyTheme(isDarkTheme.value);
-        }
-    });
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            // Only auto-change if user hasn't manually set a theme
+            if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+                isDarkTheme.value = e.matches;
+                applyTheme(isDarkTheme.value);
+            }
+        });
+    }
 };
 
 const showActiveKeyModal = ref(false);
@@ -571,4 +572,4 @@ function handlePinClose() {
     white-space: nowrap;
     display: inline-block;
 }
-</style>
+</style> 

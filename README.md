@@ -1,6 +1,105 @@
-# Steem Auth Vue
+# Steem Auth Vue Component
 
-A Vue 3 component for Steem blockchain authentication and transactions, with support for Echelon sidechain.
+This project provides a Vue 3 authentication and transaction component library for the Steem blockchain, supporting multi-account management, secure PIN-based encryption, and a user-friendly UI/UX.
+
+## Project Structure
+
+- `src/index.ts` — main entry point for the component
+- `src/components` — Vue component definitions (including `SteemAuth.vue`, `SteemTransactions.vue`, `PinModal.vue`)
+- `src/services` — services for interacting with the Steem blockchain
+- `src/utils` — utility functions
+- `src/types` — TypeScript type definitions
+- `dist/` — built component files (after running `npm run build`)
+- `test/` — test application for testing the component
+
+## Features
+
+- **Multi-account support** with add, remove, and switch logic
+- **PIN-based encryption** for secure posting key storage (see `PinModal.vue`)
+- **Keychain and SteemLogin integration**
+- **Schema-driven forms** for Steem operations
+- **Defensive UI/UX** with error handling and feedback
+
+## Development
+
+- Vue 3 with TypeScript
+- Vite for development and building
+- Steem-related libraries: `dsteem`, `steem`, `steemlogin`
+
+## Building the Component
+
+Run:
+```sh
+npm run build
+```
+This will create the following files in the `dist` directory:
+- `steem-auth-vue.es.js` — ES module version
+- `steem-auth-vue.umd.js` — UMD version for browsers
+- `style.css` — Component styles
+- Type definition files
+
+## Usage Example
+
+Import the component and styles in your app:
+```js
+import { SteemAuth } from '../dist/steem-auth-vue.es.js';
+import '../dist/style.css';
+import { useAuthStore } from '../dist/steem-auth-vue.es.js';
+```
+
+Register and use the component in your template:
+```vue
+<template>
+  <SteemAuth :appName="'MyApp'" :callbackURL="'http://localhost:3000/callback'" />
+  <SteemTransactions />
+</template>
+
+<script setup>
+import { SteemAuth } from '../dist/steem-auth-vue.es.js';
+import { SteemTransactions } from '../dist/steem-auth-vue.es.js';
+</script>
+```
+
+### PIN Modal
+- The `PinModal` component is used for secure PIN entry and confirmation during login and transaction flows.
+- PIN entry is required for encrypting/decrypting the posting key for Steem direct login accounts.
+
+### Defensive Template Example
+If you use dynamic forms or async data, always guard against undefined objects:
+```vue
+<form v-if="inputValues[operation.type]">
+  <!-- form fields -->
+</form>
+```
+
+## TypeScript Strictness & Best Practices
+
+- **Unused variables in templates or functions will cause build errors.**
+  - For unused variables in `v-for`, use `_` instead of a named variable (e.g., `(_, idx) in items`).
+  - For unused function parameters, prefix with `_` (e.g., `function handler(_e) { ... }`).
+- If you encounter build errors related to unused variables, check your component templates and scripts for unused `v-for` variables or function parameters and fix them as shown in `PinModal.vue`.
+
+## Troubleshooting
+
+### Build Errors: Unused Variables
+**Error Example:**
+```
+error TS6133: 'digit' is declared but its value is never read.
+```
+**Solution:**
+- Replace unused variables in `v-for` with `_`.
+- Prefix unused function parameters with `_`.
+- Remove unused imports.
+
+### Runtime Errors: Cannot read properties of undefined/null
+If you see errors like `Cannot read properties of undefined (reading 'from')` or similar, ensure you are guarding against undefined objects in your templates (e.g., use `v-if` to check objects exist before accessing their properties). For dynamic or async data, always check that required objects/arrays are initialized before rendering components or forms.
+
+### Modal/Component Errors
+If you use modals or dynamic components, always ensure required props are present and valid when the component is rendered. Use defensive `v-if` checks as needed.
+
+---
+
+For more details, see the code comments and the `PinModal.vue` example for best practices.
 
 ## Installation
 

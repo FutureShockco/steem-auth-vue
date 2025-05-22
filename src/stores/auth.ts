@@ -259,6 +259,10 @@ const authStoreSymbol = Symbol('authStore');
 
 const defaultStore = createAuthStore();
 
+/**
+ * Call this function ONLY from inside a component's setup() or a composable called from setup().
+ * Do NOT call at the top level of a module or in main.ts.
+ */
 export const provideAuthStore = () => {
     const store = createAuthStore();
     provide(authStoreSymbol, store);

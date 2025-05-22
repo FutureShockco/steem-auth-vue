@@ -9,22 +9,11 @@ import TransactionService from './services/transaction';
 import './assets/styles/global.css';
 
 // Export all components and utilities
-export {
-    SteemAuth,
-    SteemTransactions,
-    EchelonTransactions,
-    useAuthStore,
-    provideAuthStore,
-    TransactionService
-};
+export { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore, provideAuthStore, TransactionService };
 
 // Plugin installation function
-const install = (app: App): void => {
-    app.component('SteemAuth', SteemAuth);
+export const install = (app: App): void => {
+        app.component('SteemAuth', SteemAuth);
     app.component('SteemTransactions', SteemTransactions);
     app.component('EchelonTransactions', EchelonTransactions);
-};
-
-export default {
-    install
 }; 

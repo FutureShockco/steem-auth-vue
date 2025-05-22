@@ -176,6 +176,9 @@
   const pendingOperationType = ref<string | null>(null);
   const pendingMessage = ref<string>('');
   
+  // Add isClient ref to track client-side rendering
+  const isClient = ref(false);
+  
   const updateFormValues = () => {
     operations.forEach(operation => {
       formValues.value[operation.type] = {};
@@ -198,6 +201,7 @@
   
   // Move initialization to onMounted
   onMounted(() => {
+    isClient.value = true;
     updateFormValues();
     const customJsonOp = operations.find(op => op.type === 'custom_json');
     if (customJsonOp) updateCustomJsonAuth(customJsonOp);

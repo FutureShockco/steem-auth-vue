@@ -6,7 +6,7 @@
       </div>
       <div class="navbar-menu">
         <div class="auth-container">
-          <SteemAuth @theme-change="handleThemeChange" appName="future.app" callbackURL="https://steemx.com" />
+          <SteemAuth @theme-change="handleThemeChange" appName="future.app" callbackURL="http://localhost:3000" steemApi="https://api.justyy.com" steemApiOptions="{}" />
         </div>
       </div>
     </nav>
@@ -42,8 +42,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 // @ts-ignore - Ignore the import error for the built package in development
-//import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
-import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../src/index';
+import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
+//import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../src/index';
 
 import '../dist/style.css';
 

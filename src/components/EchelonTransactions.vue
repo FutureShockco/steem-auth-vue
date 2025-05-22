@@ -76,7 +76,7 @@
       <ul>
         <li v-for="tx in transactionStore.transactions" :key="tx.transactionId" class="steem-auth-transaction-history-item">
           <strong>{{ tx.type }}</strong>
-          <span>({{ new Date(tx.timestamp).toLocaleString() }})</span>
+          <span>({{ isClient ? new Date(tx.timestamp).toLocaleString() : '' }})</span>
           <span>Status: <b :class="`tx-status-${tx.status}`">{{ tx.status }}</b></span>
           <span>{{ tx }}</span>
           <span v-if="tx.message">- {{ tx.message }}</span>
@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 import { operations, type OperationDefinition, FieldDefinition } from '../utils/echelonOperations';
@@ -140,6 +140,9 @@ const pendingOperationType = ref<string | null>(null);
 const pendingMessage = ref<string>('');
 const transactionStore = useTransactionStore();
 
+// Add isClient ref to track client-side rendering
+const isClient = ref(false);
+
 const updateFormValues = () => {
   operations.forEach((operation: OperationDefinition) => {
     formValues.value[operation.type] = {};
@@ -164,7 +167,10 @@ watch(() => authStore.state.account, (newAccount) => {
   }
 }, { immediate: true });
 
-updateFormValues();
+onMounted(() => {
+    isClient.value = true;
+    updateFormValues();
+});
 
 const handleOperation = (operation: OperationDefinition) => {
   if (authStore.loginAuth === 'steem') {
