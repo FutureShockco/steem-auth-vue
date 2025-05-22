@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import 'regenerator-runtime/runtime';
 import App from './App.vue';
 // Import from the built distribution files
 //@ts-ignore
