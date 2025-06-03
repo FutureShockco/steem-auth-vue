@@ -1,6 +1,3 @@
-// This file is auto-generated. Do not edit manually.
-// Run 'npm run generate-operations' to update.
-
 /**
  * All available Echelon operation types
  */
@@ -55,7 +52,7 @@ export const operations: OperationDefinition[] = [
         type: 'approve_node',
         requiredAuth: 'active',
         fields: {
-            target: { type: 'string', required: false, label: 'Target', value: 'echelon-node1' }
+            target: { type: 'string', required: false, label: 'Target', value: '' }
         },
         label: 'Approve Node',
         description: 'Approve a node to participate in the network.'
@@ -332,12 +329,13 @@ export const operations: OperationDefinition[] = [
     },
     {
         type: 'user_json',
-        requiredAuth: 'active',
+        requiredAuth: 'posting',
         fields: {
-            json: { type: 'json', required: true, label: 'JSON', value: {} }
+            sender: { type: 'string', required: true, label: 'Sender', value: '' },
+            json_data: { type: 'json', required: true, label: 'JSON Data', value: '{}' }
         },
         label: 'User JSON',
-        description: 'Submit JSON data.'
+        description: 'Broadcast a generic user JSON operation for Echelon.'
     }
 ];
 

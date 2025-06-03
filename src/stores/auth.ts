@@ -56,12 +56,11 @@ const createAuthStore = (): AuthStore => {
             if (!accounts || accounts.length === 0) {
                 throw new Error('Account not found');
             }
-
             const account = accounts[0];
             const accountPostingKey = account.posting.key_auths[0][0];
 
             const privateKey = PrivateKey.fromString(postingKey);
-            const derivedPublicKey = privateKey.createPublic().toString();
+            const derivedPublicKey = privateKey.createPublic(client.addressPrefix).toString();
 
             return accountPostingKey === derivedPublicKey;
         } catch (error) {

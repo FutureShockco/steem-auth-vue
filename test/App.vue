@@ -6,7 +6,7 @@
       </div>
       <div class="navbar-menu">
         <div class="auth-container">
-          <SteemAuth @theme-change="handleThemeChange" appName="future.app" callbackURL="http://localhost:3000" steemApi="https://api.justyy.com" steemApiOptions="{}" />
+          <SteemAuth @theme-change="handleThemeChange" appName="future.app" callbackURL="http://localhost:3000" steemApi="https://testapi.moecki.online" :steemApiOptions="{addressPrefix:'MTN',chainId:'1aa939649afcc54c67e01a809967f75b8bee5d928aa6bdf237d0d5d6bfbc5c22'}" />
         </div>
       </div>
     </nav>

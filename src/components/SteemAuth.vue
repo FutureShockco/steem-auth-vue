@@ -92,7 +92,7 @@ import PinModal from './PinModal.vue';
 import { EncryptionService } from '../services/encryption';
 import type { ExtendedOperation } from './ActiveKeyModal.vue';
 import type { AuthStore } from '../stores/auth';
-import { setPinRequestHandler } from '../services/transaction';
+import { setPinRequestHandler, setActiveKeyRequestHandler } from '../services/transaction';
 import { initClient } from '@/helpers/client';
 
 // Define configuration props with defaults
@@ -141,9 +141,15 @@ const showManageAccountsModal = ref(false);
 const showPinModal = ref(false);
 const pinMode = ref<'set' | 'unlock'>('set');
 const pendingPinCallback = ref<null | ((pin: string) => void)>(null);
+const showActiveKeyModal = ref(false);
+const pendingOperation = ref<ExtendedOperation | null>(null);
 
 // Add isClient ref to track client-side rendering
 const isClient = ref(false);
+
+// Refs for programmatic active key prompting
+const activeKeyPromiseResolve = ref<null | ((value: string) => void)>(null);
+const activeKeyPromiseReject = ref<null | ((reason?: any) => void)>(null);
 
 const checkKeychain = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -313,6 +319,30 @@ onMounted(() => {
             callback(pin);
         };
     });
+
+    // Set up active key request handler for active/owner operations
+    setActiveKeyRequestHandler((username, operationType, payload, callback) => {
+        console.log('[ACTIVE KEY HANDLER] Showing Active Key modal for user:', username, 'operation:', operationType, 'payload:', payload);
+        
+        // Create operation details for the modal
+        const operationDetails: ExtendedOperation = {
+            type: operationType,
+            fields: {},
+            requiredAuth: 'active',
+            fieldValues: payload || {} // Use the actual payload from TransactionService
+        };
+        
+        pendingOperation.value = operationDetails;
+        showActiveKeyModal.value = true;
+        
+        // Set up promise handlers for when the modal completes
+        activeKeyPromiseResolve.value = callback;
+        activeKeyPromiseReject.value = (error) => {
+            console.error('[ACTIVE KEY HANDLER] Active key request failed:', error);
+            // For now, we'll just log the error since TransactionService expects a callback
+            // You might want to handle this differently depending on your error handling strategy
+        };
+    });
 });
 
 // Theme management
@@ -365,28 +395,122 @@ const initTheme = () => {
     }
 };
 
-const showActiveKeyModal = ref(false);
-const pendingOperation = ref<ExtendedOperation | null>(null);
-let onKeyProvided: ((key: string) => void) | null = null;
+const promptForActiveKey = (operationDetails: ExtendedOperation): Promise<string> => {
+  if (store.state.loginAuth !== 'steem') {
+    return Promise.reject(new Error('Active key can only be programmatically prompted for PIN-based login. For other methods like Keychain, TransactionService.send will trigger appropriate prompts if activeKey is not supplied.'));
+  }
+  // Ensure pendingOperation is correctly typed if it's used by ActiveKeyModal
+  // Make sure pendingOperation is declared in the setup refs
+  if (!pendingOperation) { // pendingOperation should be a ref
+      console.error("pendingOperation ref is not defined in SteemAuth setup.");
+      return Promise.reject(new Error("pendingOperation ref is not defined."));
+  }
+  pendingOperation.value = operationDetails;
+  showActiveKeyModal.value = true;
+  return new Promise<string>((resolve, reject) => {
+    activeKeyPromiseResolve.value = resolve;
+    activeKeyPromiseReject.value = reject;
+  });
+};
 
-function requestActiveKey(operation: ExtendedOperation, callback: (key: string) => void) {
+const handlePinSubmit = (pin: string) => {
+    console.log('[PIN MODAL] handlePinSubmit called with:', pin);
+    if (pendingPinCallback.value) {
+        pendingPinCallback.value(pin);
+        pendingPinCallback.value = null;
+    }
+};
+
+const handlePinClose = () => {
+    showPinModal.value = false;
+    // If there's a pending PIN callback (e.g. from login) and modal is closed, reject it or handle as needed
+    if (pendingPinCallback.value) {
+        // Potentially, if a login attempt was pending on PIN and modal closed, signal cancellation.
+        // For now, just clearing the callback. Specific error handling might be needed based on UX.
+        // Consider what handleSubmit expects if pendingPinCallback is cleared without execution.
+        // If loading.value was set true expecting a PIN, it should be reset.
+        if (loading.value && pinMode.value === 'set' && showModal.value) { // Specifically for login flow
+             // This implies login modal was open, PIN set mode, and it was closed.
+             // We don't want to break existing login flow, just clear PIN stuff.
+        }
+        // pendingPinCallback.value = null; // Let PinModal's own submit/close logic handle this.
+    }
+    // If closing PIN modal was for active key request, reject its promise
+    // This case should not happen if requestActiveKey is for ActiveKeyModal,
+    // but good to be defensive. PinModal is separate.
+};
+
+// This is the handler for the ActiveKeyModal's @submit event
+const handleActiveKeySubmit = (activeKeyFromModal: string) => {
+  showActiveKeyModal.value = false;
+  if (activeKeyPromiseResolve.value) {
+    activeKeyPromiseResolve.value(activeKeyFromModal);
+  } else {
+    // This case might occur if ActiveKeyModal was shown for a different purpose
+    // not tied to promptForActiveKey. For now, we assume it's for the promise.
+    console.warn('[SteemAuth] handleActiveKeySubmit called without a pending promise.');
+  }
+  activeKeyPromiseResolve.value = null;
+  activeKeyPromiseReject.value = null;
+  if (pendingOperation) pendingOperation.value = null;
+};
+
+// This is the handler for the ActiveKeyModal's @close event
+const closeActiveKeyModal = () => {
+  showActiveKeyModal.value = false;
+  if (activeKeyPromiseReject.value) {
+    activeKeyPromiseReject.value(new Error('Active Key modal was closed.'));
+  }
+  activeKeyPromiseResolve.value = null;
+  activeKeyPromiseReject.value = null;
+  if (pendingOperation) pendingOperation.value = null;
+};
+
+const requestActiveKey = (operation: ExtendedOperation, callback?: (activeKey: string) => Promise<void>) => {
+    console.log('[SteemAuth] requestActiveKey (slot prop) called with operation:', operation);
+
+    if (store.loginAuth !== 'steem') {
+        console.warn('[SteemAuth] requestActiveKey slot prop is primarily intended for PIN-based (steem) login. For Keychain or SteemLogin, the transaction service or client app should handle prompts.');
+        // For non-PIN logins, the active key isn't typically exposed directly to the app.
+        // Keychain prompts internally. SteemLogin handles it via redirect.
+        // If a callback is provided, we could indicate an error or no-op.
+        if (callback) {
+             // callback(null, new Error('Cannot provide raw active key for non-PIN login methods.'));
+             // Or simply don't call it, and let the app proceed to TransactionService.send
+             // which will trigger keychain/steemlogin specific flows.
+        }
+        return; // Do not proceed to show ActiveKeyModal for non-PIN logins via this legacy slot prop.
+    }
+    
+    // Ensure pendingOperation is defined
+    if (!pendingOperation) {
+        console.error("pendingOperation ref is not defined in SteemAuth setup for requestActiveKey.");
+        return;
+    }
+
     pendingOperation.value = operation;
     showActiveKeyModal.value = true;
-    onKeyProvided = callback;
-}
 
-function handleActiveKeySubmit(activeKey: string) {
-    showActiveKeyModal.value = false;
-    if (onKeyProvided) {
-        onKeyProvided(activeKey);
-        onKeyProvided = null;
+    // This is tricky: the existing ActiveKeyModal instance in SteemAuth's template
+    // is already wired to call SteemAuth's `handleActiveKeySubmit`.
+    // If a callback is provided to requestActiveKey, `handleActiveKeySubmit` needs to know about it.
+    // The new `promptForActiveKey` method with Promises is cleaner for programmatic use.
+    // For this slot prop, we can try to use the new promise mechanism internally
+    // if a callback is provided.
+    if (callback) {
+        promptForActiveKey(operation)
+            .then(activeKey => {
+                callback(activeKey);
+            })
+            .catch(error => {
+                console.error('[SteemAuth] Error obtaining active key via slot prop:', error);
+                // Optionally, call callback with an error or empty key
+                // callback('', error); depends on callback signature
+            });
     }
-}
-
-function closeActiveKeyModal() {
-    showActiveKeyModal.value = false;
-    onKeyProvided = null;
-}
+    // If no callback, it relies on the old behavior where some other part of the system
+    // might be reacting to ActiveKeyModal's events or SteemAuth's state changes.
+};
 
 watch(
     () => store.state.username,
@@ -468,19 +592,6 @@ const handleAutoLogin = async (acc: { username: string; loginAuth: string; acces
     // fallback: just prefill username
     showModal.value = false;
 };
-
-function handlePinSubmit(pin: string) {
-    console.log('[PIN MODAL] handlePinSubmit called with:', pin);
-    if (pendingPinCallback.value) {
-        pendingPinCallback.value(pin);
-        pendingPinCallback.value = null;
-    }
-}
-
-function handlePinClose() {
-    showPinModal.value = false;
-    pendingPinCallback.value = null;
-}
 </script>
 
 <style scoped>

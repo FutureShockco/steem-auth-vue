@@ -1,3 +1,62 @@
+# Echelon Transactions Guide
+
+This guide explains how to use the Echelon sidechain transaction components and services.
+
+## Using the EchelonTransactions Component
+
+Import and register the component:
+
+```vue
+<template>
+  <SteemAuth :appName="'MyApp'" :callbackURL="'http://localhost:3000/callback'" />
+  <EchelonTransactions />
+</template>
+
+<script setup>
+import { SteemAuth, EchelonTransactions } from 'steem-auth-vue';
+import 'steem-auth-vue/dist/style.css';
+</script>
+```
+
+### PIN Modal Integration
+- When using direct posting key login, the `PinModal` will prompt the user to set or enter a 4-digit PIN for secure key encryption.
+- The PIN is required for sending Echelon transactions that require the posting or active key.
+
+### Multi-Account Support
+- You can add, remove, and switch between multiple Steem accounts using the account dropdown in the `SteemAuth` component.
+- The transaction form fields (like `from`, `author`, etc.) will update automatically when you switch accounts.
+
+### Defensive Template Example
+Always guard against undefined objects in your templates:
+```vue
+<form v-if="inputValues[operation.type]">
+  <!-- form fields -->
+</form>
+```
+
+### Sending an Echelon Operation
+```vue
+<template>
+  <SteemAuth />
+  <EchelonTransactions />
+</template>
+```
+- Fill in the Echelon operation form and click Send. If using direct login, you will be prompted for your PIN.
+
+### Troubleshooting
+
+#### Build Errors: Unused Variables
+- Use `_` for unused variables in `v-for` and prefix unused function parameters with `_`.
+
+#### Runtime Errors: Cannot read properties of undefined/null
+- Use `v-if` guards to ensure objects exist before accessing their properties.
+
+#### PIN Modal Issues
+- If the PIN modal does not appear or PIN entry fails, ensure you are using the latest version and that your login flow is correct.
+
+---
+For more details, see the main README and the `PinModal.vue` example.
+
 # Echelon Sidechain Transactions
 
 This guide provides examples of how to use the `TransactionService` to send transactions to the Echelon sidechain.

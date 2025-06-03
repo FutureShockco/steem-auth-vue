@@ -38,6 +38,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { PrivateKey } from 'dsteem';
+import client from '../helpers/client';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 
@@ -69,7 +70,7 @@ const authStore = useAuthStore();
 const verifyActiveKey = (privateKey: string): boolean => {
   try {
     const key = PrivateKey.fromString(privateKey);
-    const publicKey = key.createPublic().toString();
+    const publicKey = key.createPublic(client.addressPrefix).toString();
     
     // Log the public key derived from the private key
     console.log('Derived public key:', publicKey);
@@ -135,20 +136,28 @@ const handleSubmit = async () => {
     } else {
       // Native Steem op, build as before
       tx = {};
-      Object.keys(props.operation.fields).forEach((key) => {
-        // Special handling for JSON fields
-        if ((props.operation.type === 'custom_json' && key === 'json') ||
-            (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
-            (key.includes('json_meta'))) {
-          if (typeof props.operation.fieldValues[key] !== 'string') {
-            tx[key] = JSON.stringify(props.operation.fieldValues[key]);
+      
+      // If fields is empty but we have fieldValues, use fieldValues directly
+      // This happens when TransactionService sends a complete operation payload
+      if (Object.keys(props.operation.fields).length === 0 && props.operation.fieldValues) {
+        tx = { ...props.operation.fieldValues };
+      } else {
+        // Original logic for operations with defined fields
+        Object.keys(props.operation.fields).forEach((key) => {
+          // Special handling for JSON fields
+          if ((props.operation.type === 'custom_json' && key === 'json') ||
+              (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
+              (key.includes('json_meta'))) {
+            if (typeof props.operation.fieldValues[key] !== 'string') {
+              tx[key] = JSON.stringify(props.operation.fieldValues[key]);
+            } else {
+              tx[key] = props.operation.fieldValues[key];
+            }
           } else {
             tx[key] = props.operation.fieldValues[key];
           }
-        } else {
-          tx[key] = props.operation.fieldValues[key];
-        }
-      });
+        });
+      }
     }
 
     console.log('Sending transaction with payload:', tx);

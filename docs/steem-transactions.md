@@ -879,4 +879,63 @@ button:disabled {
 </style>
 ```
 
-This documentation covers the most common Steem blockchain operations. For more detailed information, refer to the [Steem developer portal](https://developers.steem.io/) or the [Steem API documentation](https://developers.steem.io/apidefinitions/). 
+This documentation covers the most common Steem blockchain operations. For more detailed information, refer to the [Steem developer portal](https://developers.steem.io/) or the [Steem API documentation](https://developers.steem.io/apidefinitions/).
+
+# Steem Transactions Guide
+
+This guide explains how to use the Steem authentication and transaction components for the Steem blockchain.
+
+## Using the SteemTransactions Component
+
+Import and register the component:
+
+```vue
+<template>
+  <SteemAuth :appName="'MyApp'" :callbackURL="'http://localhost:3000/callback'" />
+  <SteemTransactions />
+</template>
+
+<script setup>
+import { SteemAuth, SteemTransactions } from 'steem-auth-vue';
+import 'steem-auth-vue/dist/style.css';
+</script>
+```
+
+### PIN Modal Integration
+- When using direct posting key login, the `PinModal` will prompt the user to set or enter a 4-digit PIN for secure key encryption.
+- The PIN is required for sending transactions that require the posting or active key.
+
+### Multi-Account Support
+- You can add, remove, and switch between multiple Steem accounts using the account dropdown in the `SteemAuth` component.
+- The transaction form fields (like `from`, `author`, etc.) will update automatically when you switch accounts.
+
+### Defensive Template Example
+Always guard against undefined objects in your templates:
+```vue
+<form v-if="inputValues[operation.type]">
+  <!-- form fields -->
+</form>
+```
+
+### Sending a Transfer
+```vue
+<template>
+  <SteemAuth />
+  <SteemTransactions />
+</template>
+```
+- Fill in the transfer form and click Send. If using direct login, you will be prompted for your PIN.
+
+### Troubleshooting
+
+#### Build Errors: Unused Variables
+- Use `_` for unused variables in `v-for` and prefix unused function parameters with `_`.
+
+#### Runtime Errors: Cannot read properties of undefined/null
+- Use `v-if` guards to ensure objects exist before accessing their properties.
+
+#### PIN Modal Issues
+- If the PIN modal does not appear or PIN entry fails, ensure you are using the latest version and that your login flow is correct.
+
+---
+For more details, see the main README and the `PinModal.vue` example. 

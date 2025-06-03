@@ -25,202 +25,146 @@ declare global {
     }
 }
 
-const authStore = useAuthStore();
-const transactionStore = useTransactionStore();
-
 let pinRequestHandler: ((username: string, callback: (pin: string) => void) => void) | null = null;
+let activeKeyRequestHandler: ((username: string, operationType: string, payload: any, callback: (activeKey: string) => void) => void) | null = null;
 
-export function setPinRequestHandler(handler: (username: string, callback: (pin: string) => void) => void) {
+export const setPinRequestHandler = (handler: (username: string, callback: (pin: string) => void) => void) => {
     pinRequestHandler = handler;
-}
+};
+
+export const setActiveKeyRequestHandler = (handler: (username: string, operationType: string, payload: any, callback: (activeKey: string) => void) => void) => {
+    activeKeyRequestHandler = handler;
+};
 
 class TransactionService {
     public async send(trx: string, payload: any, options: { requiredAuth?: 'posting' | 'active' | 'owner', activeKey?: string } = {}) {
-        return new Promise<ITransaction>(async (resolve, reject) => {
-            const transaction = {
-                operations: [
-                    [
-                        trx,
-                        payload
-                    ]
-                ]
-            }
-            console.log('Sending transaction with options:', options);
-            console.log('Transaction payload:', payload);
+        const authStore = useAuthStore();
+        const transactionStore = useTransactionStore();
+        const username = authStore.state.username;
 
-            const steemlogin = getSteemLoginClient();
+        if (!username) {
+            const errMsg = 'User is not authenticated.';
+            transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+            return Promise.reject(new Error(errMsg));
+        }
 
-            if (authStore.loginAuth === 'keychain' && window.steem_keychain) {
-                const keyType = options.requiredAuth === 'active' ? 'Active' : 
-                              options.requiredAuth === 'owner' ? 'Owner' : 'Posting';
-                              transactionStore.clearResults(trx);
+        // Build the full transaction
+        const transaction = [
+            [trx, payload]
+        ];
 
-                // Start transaction with pending state
-                transactionStore.startTransaction(trx, 'Transaction sent to Keychain for signing. Please check your Keychain extension.');
-                // Clear any previous results for this operation type
-                
-                window.steem_keychain.requestBroadcast(
-                    authStore.username,
-                    transaction.operations,
-                    keyType,
-                    (response: any) => {
-                        console.log('Keychain response:', response);
-                        if (response.success) {
-                            transactionStore.finishTransaction(
-                                true, 
-                                response.result.id, 
-                                `Transaction ${trx} completed successfully!`
-                            );
-                            resolve(response);
-                        } else {
-                            // Check for specific rejection message
-                            if (response.message && response.message.includes('ignored')) {
-                                transactionStore.finishTransaction(
-                                    false, 
-                                    '', 
-                                    '', 
-                                    'User rejected this transaction in Keychain'
-                                );
-                            } else {
-                                transactionStore.finishTransaction(
-                                    false, 
-                                    '', 
-                                    '', 
-                                    response.message || 'Transaction failed'
-                                );
+        transactionStore.startTransaction(trx, payload);
+
+        return new Promise<ITransaction>((resolve, reject) => {
+            if (options.activeKey) {
+                this._sendWithKey(trx, transaction, options.activeKey, resolve, reject);
+            } else if (authStore.loginAuth === 'keychain') {
+                this._sendWithKeychain(trx, transaction, username, options, resolve, reject);
+            } else if (authStore.loginAuth === 'steemlogin') {
+                this._sendWithSteemLogin(trx, transaction, resolve, reject);
+            } else if (authStore.loginAuth === 'steem') { // Direct key login
+                // Check if this requires active/owner key
+                if (options.requiredAuth === 'active' || options.requiredAuth === 'owner') {
+                    // For active/owner operations, request active key directly
+                    if (!activeKeyRequestHandler) {
+                        const errMsg = "Active key request handler not set for active/owner operations.";
+                        transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+                        return reject(new Error(errMsg));
+                    }
+                    activeKeyRequestHandler(username, trx, payload, (activeKey: string) => {
+                        this._sendWithKey(trx, transaction, activeKey, resolve, reject);
+                    });
+                } else {
+                    // For posting operations, use PIN to decrypt posting key
+                    if (!pinRequestHandler) {
+                        const errMsg = "PIN request handler not set for direct key login.";
+                        transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+                        return reject(new Error(errMsg));
+                    }
+                    const account = authStore.accounts.find(a => a.username === username && a.loginAuth === 'steem');
+                    if (!account || !account.encryptedPk) {
+                         const errMsg = "Encrypted posting key not found for direct login.";
+                         transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+                         return reject(new Error(errMsg));
+                    }
+                    pinRequestHandler(username, async (pin) => {
+                        try {
+                            await EncryptionService.generatePinKey(username, pin);
+                            const privateKey = await EncryptionService.decryptPrivateKey(account.encryptedPk!);
+                            if (!privateKey) {
+                                const errMsg = "Failed to decrypt key with PIN.";
+                                transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+                                return reject(new Error(errMsg));
                             }
-                            reject(new Error(response.message || 'Transaction failed'));
+                            this._sendWithKey(trx, transaction, privateKey, resolve, reject);
+                        } catch (e: any) {
+                            transactionStore.finishTransaction(false, undefined, undefined, e.message || "PIN decryption or send error.");
+                            reject(e);
                         }
-                    }
-                );
-            }
-            else if (authStore.loginAuth === 'steemlogin') {
-                try {
-                    // Start transaction with pending state
-                    transactionStore.startTransaction(trx, 'Transaction sent to SteemLogin. Please check the popup window.');
-                    // Clear any previous results for this operation type
-                    transactionStore.clearResults(trx);
-                    
-                    // For active key operations, directly use the sign URL approach
-                    if (options.requiredAuth === 'active') {
-                        console.log('SteemLogin with active key operation - opening sign URL');
-                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
-                        console.log('Opened SteemLogin sign URL:', signUrl);
-                        transactionStore.finishTransaction(
-                            false, 
-                            '', 
-                            '', 
-                            'Please sign the transaction in the new window'
-                        );
-                        reject(new Error('Please sign the transaction in the new window'));
-                        return;
-                    }
-
-                    // For posting key operations, try the standard broadcast
-                    const result = await steemlogin.broadcast(transaction.operations);
-                    console.log('Transaction broadcasted:', result);
-                    transactionStore.finishTransaction(
-                        true, 
-                        result.id, 
-                        `Transaction ${trx} completed successfully!`
-                    );
-                    resolve(result);
-                } catch (error: any) {
-                    console.error('Error broadcasting transaction:', error);
-                    if (error.error === 'invalid_scope') {
-                        // Construct the SteemLogin sign URL
-                        const signUrl = steemlogin.openSteemLoginSignUrl(trx, payload);
-                        console.log('Opened SteemLogin sign URL after error:', signUrl);
-                        transactionStore.finishTransaction(
-                            false, 
-                            '', 
-                            '', 
-                            'Please sign the transaction in the new window'
-                        );
-                        reject(new Error('Please sign the transaction in the new window'));
-                        return;
-                    }
-                    transactionStore.finishTransaction(
-                        false, 
-                        '', 
-                        '', 
-                        error instanceof Error ? error.message : 'Transaction failed'
-                    );
-                    reject(error);
+                    });
                 }
-            }
-            else {
-                try {
-                    // Start transaction with pending state
-                    transactionStore.startTransaction(trx, 'Processing transaction...');
-                    // Clear any previous results for this operation type
-                    transactionStore.clearResults(trx);
-                    
-                    let privateKey: string;
-                    if (options.requiredAuth === 'active' && options.activeKey) {
-                        console.log('Using provided active key for transaction');
-                        privateKey = options.activeKey;
-                    } else {
-                        console.log('Using stored key for transaction');
-                        let encryptedPk: string | undefined = undefined;
-                        if (authStore.loginAuth === 'steem') {
-                            const storedAccount = authStore.state.accounts.find(
-                                a => a.username === authStore.state.username && a.loginAuth === 'steem'
-                            );
-                            encryptedPk = storedAccount?.encryptedPk;
-                        }
-                        if (authStore.loginAuth === 'steem' && encryptedPk) {
-                            if (!EncryptionService.encryptionKey) {
-                                if (pinRequestHandler) {
-                                    // Request PIN from the user
-                                    pinRequestHandler(authStore.state.username, async (pin: string) => {
-                                        await EncryptionService.generatePinKey(authStore.state.username, pin);
-                                        privateKey = await EncryptionService.decryptPrivateKey(encryptedPk!);
-                                        this._sendWithKey(trx, transaction, privateKey, options, resolve, reject);
-                                    });
-                                    return;
-                                } else {
-                                    reject(new Error('PIN handler not set. Cannot decrypt posting key.'));
-                                    return;
-                                }
-                            }
-                            privateKey = await EncryptionService.decryptPrivateKey(encryptedPk);
-                        } else {
-                            privateKey = await EncryptionService.decryptPrivateKey('');
-                        }
-                    }
-                    await this._sendWithKey(trx, transaction, privateKey, options, resolve, reject);
-                } catch (error) {
-                    transactionStore.finishTransaction(
-                        false, 
-                        '', 
-                        '', 
-                        error instanceof Error ? error.message : 'Transaction failed'
-                    );
-                    reject(error);
-                }
+            } else {
+                const errMsg = 'Unsupported login method or user not properly authenticated.';
+                transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+                reject(new Error(errMsg));
             }
         });
     }
 
-    private async _sendWithKey(trx: string, transaction: any, privateKey: string, options: any, resolve: any, reject: any) {
-        try {
-            console.log('Sending transaction operation:', trx);
-            console.log('With auth type:', options.requiredAuth);
-            if (options.requiredAuth === 'active') {
-                try {
-                    const key = PrivateKey.fromString(privateKey);
-                    const publicKey = key.createPublic().toString();
-                    console.log('Public key derived from provided private key:', publicKey);
-                } catch (keyErr) {
-                    console.error('Error deriving public key:', keyErr);
+    private async _sendWithKeychain(trx: string, transaction: any, username: string, options: any, resolve: any, reject: any) {
+        const transactionStore = useTransactionStore();
+        if (typeof window !== 'undefined' && window.steem_keychain) {
+            // Determine the role based on requiredAuth
+            const role = options.requiredAuth === 'active' || options.requiredAuth === 'owner' ? 'Active' : 'Posting';
+            
+            window.steem_keychain.requestBroadcast(
+                username,
+                transaction,
+                role,
+                (response: any) => {
+                    if (response.success) {
+                        transactionStore.finishTransaction(true, response.result.id, `Transaction ${trx} sent via Keychain!`);
+                        resolve(response.result as ITransaction);
+                    } else {
+                        transactionStore.finishTransaction(false, undefined, undefined, response.message || 'Keychain broadcast failed.');
+                        reject(new Error(response.message || 'Keychain broadcast failed'));
+                    }
                 }
+            );
+        } else {
+            const errMsg = 'Steem Keychain extension not found.';
+            transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+            reject(new Error(errMsg));
+        }
+    }
+
+    private _sendWithSteemLogin(trx: string, transaction: any, resolve: any, reject: any) {
+        const transactionStore = useTransactionStore();
+        const steemLoginClient = getSteemLoginClient();
+        if (!steemLoginClient) {
+            const errMsg = 'SteemLogin client not initialized.';
+            transactionStore.finishTransaction(false, undefined, undefined, errMsg);
+            return reject(new Error(errMsg));
+        }
+
+        steemLoginClient.broadcast(transaction, (err: any, result: any) => {
+            if (err) {
+                transactionStore.finishTransaction(false, undefined, undefined, err.message || 'SteemLogin broadcast failed.');
+                reject(err);
+            } else {
+                transactionStore.finishTransaction(true, result.id, `Transaction ${trx} sent via SteemLogin!`);
+                resolve(result as ITransaction);
             }
+        });
+    }
+
+    private async _sendWithKey(trx: string, transaction: any, privateKey: string, resolve: any, reject: any) {
+        const transactionStore = useTransactionStore();
+        try {
             const result = await client.broadcast.sendOperations(
-                transaction.operations as [],
+                transaction,
                 PrivateKey.fromString(privateKey)
             );
-            console.log('Transaction sent successfully:', result);
             transactionStore.finishTransaction(
                 true, 
                 result.id, 
@@ -228,43 +172,20 @@ class TransactionService {
             );
             resolve(result as ITransaction);
         } catch (error: any) {
-            console.error('Error sending transaction:', error);
-            if (options.requiredAuth === 'active' && options.activeKey) {
-                if (error.message.includes('missing required active authority')) {
-                    console.error('Active authority validation failed. Transaction payload:', transaction);
-                    transactionStore.finishTransaction(
-                        false, 
-                        '', 
-                        '', 
-                        'Invalid active key or insufficient authority. The blockchain rejected your active key.'
-                    );
-                    reject(new Error('Invalid active key or insufficient authority. The blockchain rejected your active key.'));
-                } else if (error.message.includes('does not have sufficient funds')) {
-                    transactionStore.finishTransaction(
-                        false, 
-                        '', 
-                        '', 
-                        error.message
-                    );
-                    reject(new Error(error.message));
-                } else {
-                    transactionStore.finishTransaction(
-                        false, 
-                        '', 
-                        '', 
-                        error.message
-                    );
-                    reject(error);
+            let errorMessage = 'Failed to send transaction with key.';
+            if (error.jse_info && error.jse_info.stack && error.jse_info.stack.length > 0) {
+                const firstStack = error.jse_info.stack[0];
+                if (firstStack.format) {
+                    errorMessage = firstStack.format;
+                    if (firstStack.data) {
+                        errorMessage += `: ${JSON.stringify(firstStack.data)}`;
+                    }
                 }
-            } else {
-                transactionStore.finishTransaction(
-                    false, 
-                    '', 
-                    '', 
-                    error instanceof Error ? error.message : 'Transaction failed'
-                );
-                reject(error);
+            } else if (error.message) {
+                errorMessage = error.message;
             }
+            transactionStore.finishTransaction(false, undefined, undefined, errorMessage);
+            reject(error);
         }
     }
 }
