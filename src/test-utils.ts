@@ -1,5 +1,5 @@
 import TransactionTest from './components/TransactionTest.vue';
-import EchelonTest from './components/EchelonTest.vue';
+import MeerayTest from './components/MeerayTest.vue';
  
 // Export test components for local testing only
-export { TransactionTest, EchelonTest }; 
+export { TransactionTest, MeerayTest }; 

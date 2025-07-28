@@ -1,5 +1,5 @@
 /**
- * All available Echelon operation types
+ * All available Meeray operation types
  */
 export type OperationType = 'approve_node' | 'chain_update_create' | 'fund_request_contrib' | 'fund_request_create' | 'fund_request_work' | 'fund_request_work_review' | 'md_queue' | 'md_sign' | 'proposal_edit' | 'proposal_vote' | 'disapprove_node' | 'enable_node' | 'create_market' | 'place_order' | 'create_collection' | 'transfer_nft' | 'create_pool' | 'stake' | 'swap' | 'swap_route' | 'unstake' | 'create_token' | 'mint_token' | 'transfer_token' | 'update_token' | 'transfer' | 'user_json';
 
@@ -325,7 +325,7 @@ export const operations: OperationDefinition[] = [
             memo: { type: 'string', required: false, label: 'Memo', value: '' }
         },
         label: 'Transfer',
-        description: 'Send ECHELON tokens to another account.'
+        description: 'Send MEERAY tokens to another account.'
     },
     {
         type: 'user_json',
@@ -335,7 +335,7 @@ export const operations: OperationDefinition[] = [
             json_data: { type: 'json', required: true, label: 'JSON Data', value: '{}' }
         },
         label: 'User JSON',
-        description: 'Broadcast a generic user JSON operation for Echelon.'
+        description: 'Broadcast a generic user JSON operation for Meeray.'
     }
 ];
 

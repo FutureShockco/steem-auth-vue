@@ -1,7 +1,7 @@
 {
   "name": "steem-auth-vue",
-  "version": "1.0.11",
-  "description": "A Vue 3 authentication component for Steem blockchain and Echelon sidechain",
+  "version": "1.0.12",
+  "description": "A Vue 3 authentication component for Steem blockchain and MeeRay sidechain",
   "main": "dist/steem-auth-vue.umd.js",
   "module": "dist/steem-auth-vue.es.js",
   "types": "dist/types/index.d.ts",
@@ -32,7 +32,7 @@
     "authentication",
     "steemlogin",
     "keychain",
-    "echelon",
+    "meeray",
     "sidechain"
   ],
   "author": "",

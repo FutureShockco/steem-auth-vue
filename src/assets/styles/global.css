@@ -408,7 +408,7 @@
   font-size: 1.125rem;
 }
 
-/* Transactions component styles (shared between SteemTransactions and EchelonTransactions) */
+/* Transactions component styles (shared between SteemTransactions and MeerayTransactions) */
 .steem-auth-transactions-component {
   max-width: 800px;
   margin: 20px auto;

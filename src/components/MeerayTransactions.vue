@@ -1,9 +1,9 @@
 <template>
   <div class="steem-auth-transactions-component">
-    <h2>Echelon Transactions Test</h2>
+    <h2>Meeray Transactions Test</h2>
 
     <div v-if="!authStore.state.isAuthenticated" class="steem-auth-not-authenticated">
-      <p>Please log in first to test Echelon operations</p>
+      <p>Please log in first to test Meeray operations</p>
     </div>
 
     <div v-else class="steem-auth-transactions-content">
@@ -92,7 +92,7 @@
       :operation="currentOperation"
       @close="closeActiveKeyModal" 
       @submit="handleActiveKeySubmit" 
-      :isEchelon="true"
+      :isMeeray="true"
       @success="handleActiveKeySuccess"
     />
   </div>
@@ -102,7 +102,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
-import { operations, type OperationDefinition, FieldDefinition } from '../utils/echelonOperations';
+import { operations, type OperationDefinition, FieldDefinition } from '../utils/meerayOperations';
 import ActiveKeyModal from './ActiveKeyModal.vue';
 import { useTransactionStore } from '../stores/transaction';
 

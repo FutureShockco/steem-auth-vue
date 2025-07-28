@@ -53,7 +53,7 @@ export type ExtendedOperation = {
 const props = defineProps<{
   show: boolean;
   operation: ExtendedOperation;
-  isEchelon?: boolean;
+  isMeeray?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -116,7 +116,7 @@ const handleSubmit = async () => {
     let tx: any;
     let opType = props.operation.type;
 
-    if (props.isEchelon) {
+    if (props.isMeeray) {
       // Wrap in custom_json for Steem
       opType = 'custom_json';
       tx = {

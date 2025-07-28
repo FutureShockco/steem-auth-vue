@@ -1,10 +1,10 @@
 # Using Transactions Without Components
 
-This guide explains how to use the `TransactionService` directly to send transactions to the Steem blockchain and Echelon sidechain without using the provided Vue components.
+This guide explains how to use the `TransactionService` directly to send transactions to the Steem blockchain and Meeray sidechain without using the provided Vue components.
 
 ## Overview
 
-The Steem Auth Vue package provides components for sending transactions (`SteemTransactions` and `EchelonTransactions`), but sometimes you might need more flexibility to create custom interfaces or workflows. The `TransactionService` allows you to send transactions programmatically.
+The Steem Auth Vue package provides components for sending transactions (`SteemTransactions` and `MeerayTransactions`), but sometimes you might need more flexibility to create custom interfaces or workflows. The `TransactionService` allows you to send transactions programmatically.
 
 ## Basic Usage
 
@@ -158,20 +158,20 @@ async function followUser(userToFollow) {
 }
 ```
 
-## Echelon Sidechain Transactions
+## Meeray Sidechain Transactions
 
-Echelon is a sidechain built on top of Steem. Transactions for Echelon use the `custom_json` operation type with specific formats.
+Meeray is a sidechain built on top of Steem. Transactions for Meeray use the `custom_json` operation type with specific formats.
 
-### Basic Echelon Transaction
+### Basic Meeray Transaction
 
-Here's an example of sending an 'approve_node' operation to Echelon:
+Here's an example of sending an 'approve_node' operation to Meeray:
 
 ```js
 async function approveNode(nodeAccount) {
   try {
     const authStore = useAuthStore();
     
-    // Define the custom_json payload for Echelon
+    // Define the custom_json payload for Meeray
     const payload = {
       required_auths: [authStore.state.username],
       required_posting_auths: [],
@@ -186,7 +186,7 @@ async function approveNode(nodeAccount) {
     
     // Send the custom_json operation
     const response = await TransactionService.send('custom_json', payload, {
-      requiredAuth: 'active' // Most Echelon operations require active authority
+      requiredAuth: 'active' // Most Meeray operations require active authority
     });
     
     console.log('Approve node successful, transaction ID:', response.id);
@@ -198,7 +198,7 @@ async function approveNode(nodeAccount) {
 }
 ```
 
-### Creating a Token on Echelon
+### Creating a Token on Meeray
 
 Example of creating a new token:
 
@@ -207,7 +207,7 @@ async function createToken(symbol, name, precision, maxSupply) {
   try {
     const authStore = useAuthStore();
     
-    // Define the custom_json payload for Echelon create_token
+    // Define the custom_json payload for Meeray create_token
     const payload = {
       required_auths: [authStore.state.username],
       required_posting_auths: [],
@@ -237,7 +237,7 @@ async function createToken(symbol, name, precision, maxSupply) {
 }
 ```
 
-### Transferring Tokens on Echelon
+### Transferring Tokens on Meeray
 
 Example of transferring tokens:
 
@@ -246,7 +246,7 @@ async function transferToken(symbol, amount, recipient) {
   try {
     const authStore = useAuthStore();
     
-    // Define the custom_json payload for Echelon transfer_token
+    // Define the custom_json payload for Meeray transfer_token
     const payload = {
       required_auths: [authStore.state.username],
       required_posting_auths: [],
@@ -356,7 +356,7 @@ try {
 
 ## Complete Example
 
-Here's a complete Vue component example that handles both Steem and Echelon transactions:
+Here's a complete Vue component example that handles both Steem and Meeray transactions:
 
 ```vue
 <template>
@@ -414,9 +414,9 @@ Here's a complete Vue component example that handles both Steem and Echelon tran
       </div>
     </div>
     
-    <!-- Echelon Transactions -->
+    <!-- Meeray Transactions -->
     <div v-if="authStore.state.isAuthenticated" class="transaction-section">
-      <h3>Echelon Transactions</h3>
+      <h3>Meeray Transactions</h3>
       
       <!-- Approve Node -->
       <div class="transaction-card">
@@ -491,7 +491,7 @@ const voteAuthor = ref('');
 const votePermlink = ref('');
 const voteWeight = ref(100);
 
-// Form fields - Echelon
+// Form fields - Meeray
 const nodeAccount = ref('');
 const tokenSymbol = ref('');
 const tokenAmount = ref(1);
@@ -572,14 +572,14 @@ async function sendVote() {
   }
 }
 
-// Echelon Transactions
+// Meeray Transactions
 async function sendApproveNode() {
   resetResults();
   
   if (authStore.loginAuth === 'steem') {
     // If using direct login, prompt for active key
     pendingOperation.value = {
-      type: 'echelon_approve_node',
+      type: 'witness_vote',
       data: {
         target: nodeAccount.value
       }
@@ -616,7 +616,7 @@ async function sendTokenTransfer() {
   if (authStore.loginAuth === 'steem') {
     // If using direct login, prompt for active key
     pendingOperation.value = {
-      type: 'echelon_token_transfer',
+      type: 'token_transfer',
       data: {
         symbol: tokenSymbol.value,
         amount: parseInt(tokenAmount.value),
@@ -672,13 +672,13 @@ async function confirmActiveKey() {
       
       txResult.value = response.id || response.result?.id;
     } 
-    else if (pendingOperation.value.type === 'echelon_approve_node') {
+    else if (pendingOperation.value.type === 'witness_vote') {
       const payload = {
         required_auths: [authStore.state.username],
         required_posting_auths: [],
         id: 'sidechain',
         json: JSON.stringify({
-          contract: 'approve_node',
+          contract: 'witness_vote',
           payload: {
             target: pendingOperation.value.data.target
           }
@@ -692,7 +692,7 @@ async function confirmActiveKey() {
       
       txResult.value = response.id || response.result?.id;
     }
-    else if (pendingOperation.value.type === 'echelon_token_transfer') {
+    else if (pendingOperation.value.type === 'token_transfer') {
       const data = pendingOperation.value.data;
       
       const payload = {

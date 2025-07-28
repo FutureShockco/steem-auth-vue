@@ -1,7 +1,7 @@
 import { App } from 'vue';
 import SteemAuth from './components/SteemAuth.vue';
 import SteemTransactions from './components/SteemTransactions.vue';
-import EchelonTransactions from './components/EchelonTransactions.vue';
+import MeerayTransactions from './components/MeerayTransactions.vue';
 import { useAuthStore, provideAuthStore } from './stores/auth';
 import TransactionService from './services/transaction';
 
@@ -9,11 +9,11 @@ import TransactionService from './services/transaction';
 import './assets/styles/global.css';
 
 // Export all components and utilities
-export { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore, provideAuthStore, TransactionService };
+export { SteemAuth, SteemTransactions, MeerayTransactions, useAuthStore, provideAuthStore, TransactionService };
 
 // Plugin installation function
 export const install = (app: App): void => {
         app.component('SteemAuth', SteemAuth);
     app.component('SteemTransactions', SteemTransactions);
-    app.component('EchelonTransactions', EchelonTransactions);
+    app.component('MeerayTransactions', MeerayTransactions);
 }; 

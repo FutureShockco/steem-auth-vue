@@ -21,18 +21,18 @@
         </button>
         <button 
           class="tab-button" 
-          :class="{ active: activeTab === 'echelon' }"
-          @click="activeTab = 'echelon'"
+          :class="{ active: activeTab === 'meeray' }"
+          @click="activeTab = 'meeray'"
         >
-          Echelon Transactions
+          Meeray Transactions
         </button>
       </div>
       <div class="tab-content">
         <div v-show="activeTab === 'steem'" class="tab-panel">
           <SteemTransactions />
         </div>
-        <div v-show="activeTab === 'echelon'" class="tab-panel">
-          <EchelonTransactions />
+        <div v-show="activeTab === 'meeray'" class="tab-panel">
+          <MeerayTransactions />
         </div>
       </div>
     </div>
@@ -42,8 +42,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 // @ts-ignore - Ignore the import error for the built package in development
-import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
-//import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from '../src/index';
+import { SteemAuth, SteemTransactions, MeerayTransactions, useAuthStore } from '../dist/steem-auth-vue.es.js';
+//import { SteemAuth, SteemTransactions, MeerayTransactions, useAuthStore } from '../src/index';
 
 import '../dist/style.css';
 

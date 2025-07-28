@@ -1,26 +1,26 @@
-# Echelon Transactions Guide
+# Meeray Transactions Guide
 
-This guide explains how to use the Echelon sidechain transaction components and services.
+This guide explains how to use the Meeray sidechain transaction components and services.
 
-## Using the EchelonTransactions Component
+## Using the MeerayTransactions Component
 
 Import and register the component:
 
 ```vue
 <template>
   <SteemAuth :appName="'MyApp'" :callbackURL="'http://localhost:3000/callback'" />
-  <EchelonTransactions />
+  <MeerayTransactions />
 </template>
 
 <script setup>
-import { SteemAuth, EchelonTransactions } from 'steem-auth-vue';
+import { SteemAuth, MeerayTransactions } from 'steem-auth-vue';
 import 'steem-auth-vue/dist/style.css';
 </script>
 ```
 
 ### PIN Modal Integration
 - When using direct posting key login, the `PinModal` will prompt the user to set or enter a 4-digit PIN for secure key encryption.
-- The PIN is required for sending Echelon transactions that require the posting or active key.
+- The PIN is required for sending Meeray transactions that require the posting or active key.
 
 ### Multi-Account Support
 - You can add, remove, and switch between multiple Steem accounts using the account dropdown in the `SteemAuth` component.
@@ -34,14 +34,14 @@ Always guard against undefined objects in your templates:
 </form>
 ```
 
-### Sending an Echelon Operation
+### Sending an Meeray Operation
 ```vue
 <template>
   <SteemAuth />
-  <EchelonTransactions />
+  <MeerayTransactions />
 </template>
 ```
-- Fill in the Echelon operation form and click Send. If using direct login, you will be prompted for your PIN.
+- Fill in the Meeray operation form and click Send. If using direct login, you will be prompted for your PIN.
 
 ### Troubleshooting
 
@@ -57,13 +57,13 @@ Always guard against undefined objects in your templates:
 ---
 For more details, see the main README and the `PinModal.vue` example.
 
-# Echelon Sidechain Transactions
+# Meeray Sidechain Transactions
 
-This guide provides examples of how to use the `TransactionService` to send transactions to the Echelon sidechain.
+This guide provides examples of how to use the `TransactionService` to send transactions to the Meeray sidechain.
 
 ## Overview
 
-Echelon is a next generation sidechain designed to extend the capabilities of the Steem Blockchain with advanced features like tokens, NFTs, markets, and staking. It processes Steem custom_json operations to enable these additional functionalities while maintaining the security and decentralization of the Steem blockchain.
+Meeray is a next generation sidechain designed to extend the capabilities of the Steem Blockchain with advanced features like tokens, NFTs, markets, and staking. It processes Steem custom_json operations to enable these additional functionalities while maintaining the security and decentralization of the Steem blockchain.
 
 ## Basic Usage
 
@@ -73,10 +73,10 @@ First, import the necessary services:
 import { useAuthStore, TransactionService } from 'steem-auth-vue';
 ```
 
-The basic pattern for sending any Echelon transaction is:
+The basic pattern for sending any Meeray transaction is:
 
 ```js
-// 1. Create the Echelon transaction data
+// 1. Create the Meeray transaction data
 const jsonData = {
   contract: 'contract_name',
   payload: { /* contract-specific data */ }
@@ -84,7 +84,7 @@ const jsonData = {
 
 // 2. Create the custom_json operation
 const tx = {
-  required_auths: [authStore.state.username], // Most Echelon operations require active authority
+  required_auths: [authStore.state.username], // Most Meeray operations require active authority
   required_posting_auths: [],
   id: 'sidechain',
   json: JSON.stringify(jsonData)
@@ -107,7 +107,7 @@ console.log('Transaction ID:', response.id);
 
 ### Approve a Node
 
-Approve a node for the Echelon network:
+Approve a node for the Meeray network:
 
 ```js
 async function approveNode(target) {
@@ -187,7 +187,7 @@ async function enableNode(publicKey) {
 
 ### Create a Token
 
-Create a new token on Echelon:
+Create a new token on Meeray:
 
 ```js
 async function createToken(symbol, name, precision, maxSupply) {
@@ -201,7 +201,7 @@ async function createToken(symbol, name, precision, maxSupply) {
       contract: 'create_token',
       payload: {
         symbol: symbol, // Token symbol (e.g., "ECHELON")
-        name: name, // Token name (e.g., "Echelon Token")
+        name: name, // Token name (e.g., "Meeray Token")
         precision: precision, // Decimal precision (e.g., "3")
         maxSupply: maxSupply // Maximum supply (e.g., 1000000)
       }
@@ -701,7 +701,7 @@ async function fundRequestWorkReview(id, approve, memo) {
 
 ### Transfer Native Tokens
 
-Transfer native Echelon tokens:
+Transfer native Meeray tokens:
 
 ```js
 async function transfer(to, amount, memo = '') {
@@ -809,7 +809,7 @@ async function mdSign(id) {
 ## Error Handling
 
 ```js
-async function safeEchelonTransaction(contract, payload, activeKey = null) {
+async function safeMeerayTransaction(contract, payload, activeKey = null) {
   try {
     const authStore = useAuthStore();
     
@@ -854,7 +854,7 @@ Here's a full component example that implements a token transfer form:
 ```vue
 <template>
   <div class="echelon-token-transfer">
-    <h3>Transfer Echelon Token</h3>
+    <h3>Transfer Meeray Token</h3>
     
     <form @submit.prevent="sendTokenTransfer">
       <div class="form-group">
@@ -1091,4 +1091,4 @@ button:disabled {
 </style>
 ```
 
-This documentation covers the most common Echelon sidechain operations. For more detailed information, refer to the [Echelon GitHub repository](https://github.com/FutureShockco/echelon) or examine the Echelon contracts code for specific requirements of each contract. 
+This documentation covers the most common Meeray sidechain operations. For more detailed information, refer to the [Meeray GitHub repository](https://github.com/FutureShockco/echelon) or examine the Meeray contracts code for specific requirements of each contract. 

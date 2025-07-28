@@ -208,7 +208,7 @@ const authStore = useAuthStore();
 
 ### Transaction Components
 
-Use the transaction components to send operations to the Steem blockchain or Echelon sidechain:
+Use the transaction components to send operations to the Steem blockchain or Meeray sidechain:
 
 ```vue
 <template>
@@ -217,22 +217,22 @@ Use the transaction components to send operations to the Steem blockchain or Ech
     <!-- For Steem blockchain transactions -->
     <SteemTransactions v-if="authStore.state.isAuthenticated" />
     
-    <!-- For Echelon sidechain transactions -->
-    <EchelonTransactions v-if="authStore.state.isAuthenticated" />
+    <!-- For Meeray sidechain transactions -->
+    <MeerayTransactions v-if="authStore.state.isAuthenticated" />
   </div>
 </template>
 
 <script setup>
-import { SteemAuth, SteemTransactions, EchelonTransactions, useAuthStore } from 'steem-auth-vue';
+import { SteemAuth, SteemTransactions, MeerayTransactions, useAuthStore } from 'steem-auth-vue';
 import 'steem-auth-vue/dist/style.css'; // Import styles
 
 const authStore = useAuthStore();
 </script>
 ```
 
-## Echelon Sidechain Support
+## Meeray Sidechain Support
 
-This component supports [Echelon](https://github.com/FutureShockco/echelon), a next generation sidechain for the Steem blockchain that provides advanced features like tokens, NFTs, markets, and staking.
+This component supports [Meeray](https://github.com/FutureShockco/meeray), a next generation sidechain for the Steem blockchain that provides advanced features like tokens, NFTs, markets, and staking.
 
 ### Using Transactions Service Directly
 
@@ -287,7 +287,7 @@ async function sendTransfer() {
 </script>
 ```
 
-#### Sending Echelon Sidechain Transactions
+#### Sending Meeray Sidechain Transactions
 
 ```vue
 <template>
@@ -314,7 +314,7 @@ async function approveNode() {
     result.value = '';
     error.value = '';
     
-    // Create the custom_json payload for an Echelon operation
+    // Create the custom_json payload for an Meeray operation
     const payload = {
       required_auths: [authStore.state.username],
       required_posting_auths: [],
@@ -346,7 +346,7 @@ async function approveNode() {
 For detailed documentation on all available operations:
 
 - [Steem Transactions](./docs/steem-transactions.md) - Complete guide for Steem blockchain operations
-- [Echelon Transactions](./docs/echelon-transactions.md) - Complete guide for Echelon sidechain operations
+- [Meeray Transactions](./docs/meeray-transactions.md) - Complete guide for Meeray sidechain operations
 
 ## License
 
@@ -361,7 +361,7 @@ MIT
 - TypeScript support
 - Pinia store integration
 - Steem blockchain transactions
-- Echelon sidechain transactions
+- Meeray sidechain transactions
 
 ## Authentication Methods
 
