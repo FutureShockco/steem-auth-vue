@@ -92,6 +92,7 @@ const props = defineProps({
   accounts: { type: Array, default: () => [] }
 });
 const typedAccounts = computed(() => (props.accounts || []) as { username: string; loginAuth: string; accessToken?: string; encryptedPk?: string }[]);
+import { watch } from 'vue';
 const emit = defineEmits([
   'close',
   'submit',
@@ -99,10 +100,19 @@ const emit = defineEmits([
   'update:username',
   'update:postingKey',
   'update:useKeychain',
-  'auto-login'
+  'auto-login',
+  'modalOpen',
+  'modalClose',
 ]);
+
+watch(() => props.visible, (val, oldVal) => {
+  if (val && !oldVal) emit('modalOpen');
+  if (!val && oldVal) emit('modalClose');
+});
+
 function onClose() {
   emit('close');
+  emit('modalClose');
 }
 function onSubmit() {
   emit('submit');

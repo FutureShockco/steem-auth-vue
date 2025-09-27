@@ -65,7 +65,9 @@
             :loginAuth="store.state.loginAuth" :currentUsername="store.state.username" :accounts="store.accounts"
             @close="showModal = false" @submit="handleSubmit" @steemlogin="handleSteemLogin"
             @update:username="username = $event" @update:postingKey="postingKey = $event"
-            @update:useKeychain="useKeychain = $event" @auto-login="handleAutoLogin" />
+            @update:useKeychain="useKeychain = $event" @auto-login="handleAutoLogin"
+            @modalOpen="$emit('modalOpen')" @modalClose="$emit('modalClose')"
+        />
 
         <ManageAccountsModal v-if="showManageAccountsModal && store.state.isAuthenticated"
             :visible="showManageAccountsModal" :accounts="store.accounts" :currentUsername="store.state.username"
@@ -118,6 +120,8 @@ const props = withDefaults(defineProps<{
 // Emit events for theme changes
 const emit = defineEmits<{
     (e: 'theme-change', isDark: boolean): void;
+    (e: 'modalOpen'): void;
+    (e: 'modalClose'): void;
 }>();
 
 // Initialize store with proper typing
