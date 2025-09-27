@@ -11,14 +11,14 @@
             <!-- Login Button / User Info -->
             <template v-if="!store.state.isAuthenticated">
                 <button @click="openLoginModal" class="steem-auth-button">
-            <slot name="trigger">
+                    <slot name="trigger">
                         <span>Login</span>
-            </slot>
-        </button>
+                    </slot>
+                </button>
             </template>
             <template v-else>
                 <div class="steem-auth-user-info">
-            <slot name="user-info">
+                    <slot name="user-info">
                         <div class="steem-auth-user-profile">
                             <div class="steem-auth-dropdown-wrapper">
                                 <button class="steem-auth-button" @click="showDropdown = !showDropdown">
@@ -30,14 +30,12 @@
                                         }})
                                     </div>
                                     <div class="steem-auth-dropdown-list">
-                                        <div v-for="acc in store.accounts" :key="acc.username">
-                                            <button class="steem-auth-dropdown-item"
-                                                :disabled="acc.username === store.state.username"
-                                                @click="switchAccountFromDropdown(acc.username)">
-                                                {{ acc.username }} ({{ acc.loginAuth }})
-                    </button>
-                </div>
-        </div>
+                                        <button class="steem-auth-dropdown-item" v-for="acc in store.accounts"
+                                            :key="acc.username" :disabled="acc.username === store.state.username"
+                                            @click="switchAccountFromDropdown(acc.username)">
+                                            {{ acc.username }} ({{ acc.loginAuth }})
+                                        </button>
+                                    </div>
                                     <button class="steem-auth-dropdown-item" @click="openAddAccountModal">
                                         Add Account
                                     </button>
@@ -48,10 +46,10 @@
                                     <button class="steem-auth-dropdown-item steem-auth-button-danger"
                                         @click="handleLogout">
                                         Logout
-                        </button>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                            </div>
-                            </div>
                     </slot>
                 </div>
             </template>
@@ -65,9 +63,8 @@
             :loginAuth="store.state.loginAuth" :currentUsername="store.state.username" :accounts="store.accounts"
             @close="showModal = false" @submit="handleSubmit" @steemlogin="handleSteemLogin"
             @update:username="username = $event" @update:postingKey="postingKey = $event"
-            @update:useKeychain="useKeychain = $event" @auto-login="handleAutoLogin"
-            @modalOpen="$emit('modalOpen')" @modalClose="$emit('modalClose')"
-        />
+            @update:useKeychain="useKeychain = $event" @auto-login="handleAutoLogin" @modalOpen="$emit('modalOpen')"
+            @modalClose="$emit('modalClose')" />
 
         <ManageAccountsModal v-if="showManageAccountsModal && store.state.isAuthenticated"
             :visible="showManageAccountsModal" :accounts="store.accounts" :currentUsername="store.state.username"
@@ -257,7 +254,7 @@ const handleSubmit = async (): Promise<void> => {
         }
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
         if (!useKeychain.value) {
-        showModal.value = false;
+            showModal.value = false;
         }
     } catch (err: Error | unknown) {
         error.value = err instanceof Error ? err.message : 'Login failed';
@@ -289,16 +286,16 @@ onMounted(() => {
 
     // Only check for keychain if it's enabled
     if (props.enableKeychain) {
-    hasKeychain.value = checkKeychain();
-    
-    setTimeout(() => {
         hasKeychain.value = checkKeychain();
-    }, 1000);
+
+        setTimeout(() => {
+            hasKeychain.value = checkKeychain();
+        }, 1000);
     }
 
     // Handle SteemLogin callback if enabled
     if (props.enableSteemLogin) {
-    handleSteemLoginCallback();
+        handleSteemLoginCallback();
     }
 
     store.checkUser();
@@ -327,7 +324,7 @@ onMounted(() => {
     // Set up active key request handler for active/owner operations
     setActiveKeyRequestHandler((username, operationType, payload, callback) => {
         console.log('[ACTIVE KEY HANDLER] Showing Active Key modal for user:', username, 'operation:', operationType, 'payload:', payload);
-        
+
         // Create operation details for the modal
         const operationDetails: ExtendedOperation = {
             type: operationType,
@@ -335,10 +332,10 @@ onMounted(() => {
             requiredAuth: 'active',
             fieldValues: payload || {} // Use the actual payload from TransactionService
         };
-        
+
         pendingOperation.value = operationDetails;
         showActiveKeyModal.value = true;
-        
+
         // Set up promise handlers for when the modal completes
         activeKeyPromiseResolve.value = callback;
         activeKeyPromiseReject.value = (error) => {
@@ -400,21 +397,21 @@ const initTheme = () => {
 };
 
 const promptForActiveKey = (operationDetails: ExtendedOperation): Promise<string> => {
-  if (store.state.loginAuth !== 'steem') {
-    return Promise.reject(new Error('Active key can only be programmatically prompted for PIN-based login. For other methods like Keychain, TransactionService.send will trigger appropriate prompts if activeKey is not supplied.'));
-  }
-  // Ensure pendingOperation is correctly typed if it's used by ActiveKeyModal
-  // Make sure pendingOperation is declared in the setup refs
-  if (!pendingOperation) { // pendingOperation should be a ref
-      console.error("pendingOperation ref is not defined in SteemAuth setup.");
-      return Promise.reject(new Error("pendingOperation ref is not defined."));
-  }
-  pendingOperation.value = operationDetails;
-  showActiveKeyModal.value = true;
-  return new Promise<string>((resolve, reject) => {
-    activeKeyPromiseResolve.value = resolve;
-    activeKeyPromiseReject.value = reject;
-  });
+    if (store.state.loginAuth !== 'steem') {
+        return Promise.reject(new Error('Active key can only be programmatically prompted for PIN-based login. For other methods like Keychain, TransactionService.send will trigger appropriate prompts if activeKey is not supplied.'));
+    }
+    // Ensure pendingOperation is correctly typed if it's used by ActiveKeyModal
+    // Make sure pendingOperation is declared in the setup refs
+    if (!pendingOperation) { // pendingOperation should be a ref
+        console.error("pendingOperation ref is not defined in SteemAuth setup.");
+        return Promise.reject(new Error("pendingOperation ref is not defined."));
+    }
+    pendingOperation.value = operationDetails;
+    showActiveKeyModal.value = true;
+    return new Promise<string>((resolve, reject) => {
+        activeKeyPromiseResolve.value = resolve;
+        activeKeyPromiseReject.value = reject;
+    });
 };
 
 const handlePinSubmit = (pin: string) => {
@@ -434,8 +431,8 @@ const handlePinClose = () => {
         // Consider what handleSubmit expects if pendingPinCallback is cleared without execution.
         // If loading.value was set true expecting a PIN, it should be reset.
         if (loading.value && pinMode.value === 'set' && showModal.value) { // Specifically for login flow
-             // This implies login modal was open, PIN set mode, and it was closed.
-             // We don't want to break existing login flow, just clear PIN stuff.
+            // This implies login modal was open, PIN set mode, and it was closed.
+            // We don't want to break existing login flow, just clear PIN stuff.
         }
         // pendingPinCallback.value = null; // Let PinModal's own submit/close logic handle this.
     }
@@ -446,28 +443,28 @@ const handlePinClose = () => {
 
 // This is the handler for the ActiveKeyModal's @submit event
 const handleActiveKeySubmit = (activeKeyFromModal: string) => {
-  showActiveKeyModal.value = false;
-  if (activeKeyPromiseResolve.value) {
-    activeKeyPromiseResolve.value(activeKeyFromModal);
-  } else {
-    // This case might occur if ActiveKeyModal was shown for a different purpose
-    // not tied to promptForActiveKey. For now, we assume it's for the promise.
-    console.warn('[SteemAuth] handleActiveKeySubmit called without a pending promise.');
-  }
-  activeKeyPromiseResolve.value = null;
-  activeKeyPromiseReject.value = null;
-  if (pendingOperation) pendingOperation.value = null;
+    showActiveKeyModal.value = false;
+    if (activeKeyPromiseResolve.value) {
+        activeKeyPromiseResolve.value(activeKeyFromModal);
+    } else {
+        // This case might occur if ActiveKeyModal was shown for a different purpose
+        // not tied to promptForActiveKey. For now, we assume it's for the promise.
+        console.warn('[SteemAuth] handleActiveKeySubmit called without a pending promise.');
+    }
+    activeKeyPromiseResolve.value = null;
+    activeKeyPromiseReject.value = null;
+    if (pendingOperation) pendingOperation.value = null;
 };
 
 // This is the handler for the ActiveKeyModal's @close event
 const closeActiveKeyModal = () => {
-  showActiveKeyModal.value = false;
-  if (activeKeyPromiseReject.value) {
-    activeKeyPromiseReject.value(new Error('Active Key modal was closed.'));
-  }
-  activeKeyPromiseResolve.value = null;
-  activeKeyPromiseReject.value = null;
-  if (pendingOperation) pendingOperation.value = null;
+    showActiveKeyModal.value = false;
+    if (activeKeyPromiseReject.value) {
+        activeKeyPromiseReject.value(new Error('Active Key modal was closed.'));
+    }
+    activeKeyPromiseResolve.value = null;
+    activeKeyPromiseReject.value = null;
+    if (pendingOperation) pendingOperation.value = null;
 };
 
 const requestActiveKey = (operation: ExtendedOperation, callback?: (activeKey: string) => Promise<void>) => {
@@ -479,13 +476,13 @@ const requestActiveKey = (operation: ExtendedOperation, callback?: (activeKey: s
         // Keychain prompts internally. SteemLogin handles it via redirect.
         // If a callback is provided, we could indicate an error or no-op.
         if (callback) {
-             // callback(null, new Error('Cannot provide raw active key for non-PIN login methods.'));
-             // Or simply don't call it, and let the app proceed to TransactionService.send
-             // which will trigger keychain/steemlogin specific flows.
+            // callback(null, new Error('Cannot provide raw active key for non-PIN login methods.'));
+            // Or simply don't call it, and let the app proceed to TransactionService.send
+            // which will trigger keychain/steemlogin specific flows.
         }
         return; // Do not proceed to show ActiveKeyModal for non-PIN logins via this legacy slot prop.
     }
-    
+
     // Ensure pendingOperation is defined
     if (!pendingOperation) {
         console.error("pendingOperation ref is not defined in SteemAuth setup for requestActiveKey.");
@@ -687,4 +684,4 @@ const handleAutoLogin = async (acc: { username: string; loginAuth: string; acces
     white-space: nowrap;
     display: inline-block;
 }
-</style> 
+</style>
