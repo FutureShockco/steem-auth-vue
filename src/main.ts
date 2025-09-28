@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import 'regenerator-runtime/runtime';
 import App from './App.vue'
 // import { provideAuthStore } from './stores/auth' // Do NOT call provideAuthStore here
-import './assets/main.css'
+import './assets/styles/global.css'
 
 const app = createApp(App)
 

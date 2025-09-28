@@ -1,6 +1,4 @@
-/* Global variables */
 :root {
-  /* Light theme (default) */
   --steem-auth-primary-color: #1a73e8;
   --steem-auth-primary-hover: #1557b0;
   --steem-auth-secondary-color: #10B981;
@@ -8,6 +6,9 @@
   --steem-auth-card-background: #FFFFFF;
   --steem-auth-border-color: #E2E8F0;
   --steem-auth-error-color: #d93025;
+  --steem-auth-success-color: #48bb78;
+  --steem-auth-warning-color: #f56565;
+  --steem-auth-info-color: #4299e1;
   --steem-auth-text-color: #FFFFFF;
   --steem-auth-text-primary: #0F172A;
   --steem-auth-text-secondary: #64748B;
@@ -21,9 +22,51 @@
   --transition: all 0.15s ease;
 }
 
+.steem-auth-accounts-row {
+  display: flex;
+  gap: 1em;
+  margin-bottom: 1.5em;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
 
+.steem-auth-account-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5em 1em 0.7em 1em;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  min-width: 80px;
+  max-width: 110px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
 
-/* Common styles for all components */
+.steem-auth-account-card:hover {
+  border-color: #3182ce;
+  box-shadow: 0 2px 8px rgba(49, 130, 206, 0.12);
+}
+
+.steem-auth-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 0.4em;
+  background: #e2e8f0;
+}
+
+.steem-auth-account-username {
+  font-size: 0.97em;
+  font-weight: 500;
+  color: #222;
+  text-align: center;
+  word-break: break-all;
+}
+
 .steem-auth-component {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.5;
@@ -32,7 +75,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Button styles */
 .steem-auth-button {
   background-color: var(--steem-auth-primary-color);
   color: var(--steem-auth-text-color);
@@ -61,14 +103,10 @@
   transform: none;
 }
 
-/* Full-width button variant */
 .steem-auth-button.full-width {
   width: 100%;
 }
 
-
-
-/* Input styles */
 .steem-auth-input {
   max-width: 100%;
   padding: var(--steem-auth-input-padding);
@@ -90,7 +128,6 @@
   border-color: var(--steem-auth-error-color);
 }
 
-/* Form group */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -104,7 +141,6 @@
   font-size: 0.875rem;
 }
 
-/* Message styles */
 .steem-auth-success-message {
   color: var(--steem-auth-secondary-color);
   padding: 10px;
@@ -129,7 +165,6 @@
   font-weight: 500;
 }
 
-/* Card styles */
 .steem-auth-card {
   background: var(--steem-auth-card-background);
   border-radius: 8px;
@@ -137,7 +172,6 @@
   padding: 1.5rem;
 }
 
-/* Spinner for loading states */
 .steem-auth-spinner {
   width: 1.125rem;
   height: 1.125rem;
@@ -153,7 +187,6 @@
   }
 }
 
-/* Radio and checkbox styling */
 .steem-auth-radio-option {
   display: flex;
   align-items: center;
@@ -169,7 +202,6 @@
   user-select: none;
 }
 
-/* Hide the default checkbox */
 .steem-auth-checkbox-container input[type="checkbox"] {
   position: absolute;
   opacity: 0;
@@ -178,10 +210,7 @@
   width: 0;
 }
 
-
-
-/* Show check when checked */
-.steem-auth-checkbox-container input[type="checkbox"]:checked + .steem-auth-checkmark::after {
+.steem-auth-checkbox-container input[type="checkbox"]:checked+.steem-auth-checkmark::after {
   content: '';
   position: absolute;
   left: 5px;
@@ -194,14 +223,13 @@
   display: block;
 }
 
-/* Modal styles */
 .steem-auth-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -214,7 +242,7 @@
   min-width: 340px;
   max-width: 95vw;
   padding: 1.5em 1.5em 1em 1.5em;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
   position: relative;
 }
 
@@ -251,13 +279,13 @@
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* SteemAuth specific styles */
 .steem-auth {
   display: flex;
   flex-direction: column;
@@ -299,28 +327,6 @@
 
 .steem-auth-option {
   width: 100%;
-}
-
-.steem-auth-divider {
-  text-align: center;
-  margin: 1em 0;
-  color: #888;
-  font-size: 0.97em;
-  position: relative;
-}
-
-.steem-auth-divider::before,
-.steem-auth-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--steem-auth-border-color);
-}
-
-.steem-auth-divider span {
-  background: #fff;
-  padding: 0 0.5em;
-  position: relative;
-  z-index: 1;
 }
 
 .steem-auth-keychain-download {
@@ -373,7 +379,6 @@
   font-size: 1.125rem;
 }
 
-/* Transactions component styles (shared between SteemTransactions and MeerayTransactions) */
 .steem-auth-transactions-component {
   max-width: 800px;
   margin: 20px auto;
@@ -435,36 +440,15 @@
   margin-top: 5px;
 }
 
-.steem-auth-send-button {
-  background: var(--steem-auth-primary-color);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s;
-  margin-top: 15px;
-  display: inline-block;
-}
-
-.steem-auth-send-button:hover {
-  background: var(--steem-auth-primary-hover);
-}
-
-/* Tab panel styling for test app */
 .steem-auth-tab-panel {
   width: 100%;
 }
 
-/* Not authenticated message */
 .steem-auth-not-authenticated {
   text-align: center;
   padding: 20px;
   color: var(--steem-auth-text-secondary);
 }
-
-/* === SteemAuth Modal, Button, Dropdown, and Auth Styles (migrated from components) === */
 
 .steem-auth-login-section {
   margin-bottom: 1em;
@@ -477,7 +461,7 @@
 
 .steem-auth-current-account-msg {
   font-size: 0.98em;
-  color: #444;
+  color: var(--steem-auth-text-primary, #444);
   margin-bottom: 0.25em;
 }
 
@@ -506,8 +490,8 @@
 }
 
 .steem-auth-button-danger {
-  background: #e53e3e;
-  color: #fff;
+  background: var(--steem-auth-warning-color, #e53e3e);
+  color: var(--steem-auth-text-color, #fff);
 }
 
 .steem-auth-modal-confirm {
@@ -526,22 +510,12 @@
   margin-bottom: 1em;
 }
 
-.steem-auth-accounts-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5em 0;
-  border-bottom: 1px solid #eee;
-}
+
 
 .steem-auth-accounts-info {
   display: flex;
   align-items: center;
   gap: 0.5em;
-}
-
-.steem-auth-accounts-username {
-  font-weight: bold;
 }
 
 .steem-auth-accounts-auth {
@@ -575,9 +549,9 @@
 .steem-auth-dropdown-menu {
   position: absolute;
   top: 100%;
-  left: 0;
-  background: #fff;
-  border: 1px solid #ccc;
+  right: 0;
+  background: var(--steem-auth-background, #fff);
+  border: 1px solid var(--steem-auth-border-color, #ccc);
   border-radius: 4px;
   min-width: 180px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
@@ -588,13 +562,21 @@
 .steem-auth-dropdown-current {
   padding: 0.5em 1em;
   font-size: 0.95em;
-  color: #333;
-  border-bottom: 1px solid #eee;
+  color: var(--steem-auth-text-primary, #333);
+  border-bottom: 1px solid var(--steem-auth-border-color, #eee);
 }
 
 .steem-auth-dropdown-list {
   max-height: 180px;
   overflow-y: auto;
+}
+
+.steem-auth-accounts-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5em 0;
+  border-bottom: 1px solid #eee;
 }
 
 .steem-auth-dropdown-item {
@@ -605,7 +587,7 @@
   padding: 0.5em 1em;
   font-size: 1em;
   cursor: pointer;
-  color: #333;
+  color: var(--steem-auth-text-primary, #333);
   transition: background 0.15s;
 }
 
@@ -615,10 +597,178 @@
 }
 
 .steem-auth-dropdown-item:not(:disabled):hover {
-  background: #f5f5f5;
+  background: var(--steem-auth-background, #f5f5f5);
 }
 
-.steem-auth-dropdown-divider {
-  border-top: 1px solid #eee;
+.steem-auth-divider {
+  border-top: 1px solid var(--steem-auth-border-color, #eee);
   margin: 0.5em 0;
-} 
+}
+
+.steem-auth-divider::before,
+.steem-auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--steem-auth-border-color);
+}
+
+.steem-auth-divider span {
+  background: #fff;
+  padding: 0 0.5em;
+  position: relative;
+  z-index: 1;
+}
+
+.operation-block {
+  background: var(--steem-auth-card-background, #fff);
+  border-radius: 8px;
+  box-shadow: var(--steem-auth-shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
+  padding: 1.25em 1.5em 1em 1.5em;
+  margin-bottom: 2em;
+}
+
+.operation-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+.operation-label {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-right: 0.5em;
+}
+
+.operation-tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-icon {
+  background: #eee;
+  border-radius: 50%;
+  width: 1.2em;
+  height: 1.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  cursor: pointer;
+  margin-left: 0.2em;
+}
+
+.tooltip-content {
+  visibility: hidden;
+  width: 220px;
+  background: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 4px;
+  padding: 0.5em;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 0.95em;
+}
+
+.operation-tooltip:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+}
+
+.transaction-status {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.is-pending {
+  background-color: var(--steem-auth-background, #f8f9fa);
+  border-left: 4px solid var(--steem-auth-info-color, #4299e1);
+}
+
+.is-success {
+  background-color: var(--steem-auth-success-bg, #f0fff4);
+  border-left: 4px solid var(--steem-auth-success-color, #48bb78);
+}
+
+.is-error {
+  background-color: var(--steem-auth-error-bg, #fff5f5);
+  border-left: 4px solid var(--steem-auth-warning-color, #f56565);
+}
+
+.transaction-pending,
+.transaction-success,
+.transaction-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.transaction-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(66, 153, 225, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--steem-auth-info-color, #4299e1);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.transaction-success-icon {
+  width: 24px;
+  height: 24px;
+  background-color: var(--steem-auth-success-color, #48bb78);
+  border-radius: 50%;
+  color: var(--steem-auth-text-color, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.transaction-error-icon {
+  width: 24px;
+  height: 24px;
+  background-color: var(--steem-auth-warning-color, #f56565);
+  border-radius: 50%;
+  color: var(--steem-auth-text-color, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.transaction-id {
+  font-size: 0.8rem;
+  color: var(--steem-auth-text-secondary, #718096);
+  margin-top: 5px;
+  word-break: break-all;
+}
+
+.transaction-dismiss {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: transparent;
+  border: 1px solid var(--steem-auth-border-color, #e2e8f0);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.transaction-dismiss:hover {
+  background-color: var(--steem-auth-background, #edf2f7);
+}

@@ -123,38 +123,3 @@ function closeModal() {
   emit('close');
 }
 </script>
-
-<style scoped>
-.pin-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.pin-input-row {
-  display: flex;
-  gap: 0.5em;
-  margin-bottom: 1em;
-  justify-content: center;
-}
-.pin-input {
-  width: 2.5em;
-  height: 2.5em;
-  font-size: 2em;
-  text-align: center;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #f7fafc;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.pin-input:focus {
-  border-color: #3182ce;
-}
-.pin-input.error {
-  border-color: #e53e3e;
-}
-.pin-confirm-row {
-  margin-bottom: 1em;
-  text-align: center;
-}
-</style> 

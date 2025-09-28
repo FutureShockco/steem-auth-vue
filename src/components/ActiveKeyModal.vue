@@ -5,27 +5,18 @@
         <h2>Active Key Required</h2>
         <button class="steem-auth-close-button" @click="closeModal">&times;</button>
       </div>
-
       <div class="steem-auth-modal-body">
         <div class="form-group">
           <label for="active-key">Active Key</label>
-          <input
-            id="active-key"
-            v-model="activeKey"
-            type="password"
-            placeholder="Enter your active key"
-            class="steem-auth-input"
-            :class="{ 'error': error }"
-          />
+          <input id="active-key" v-model="activeKey" type="password" placeholder="Enter your active key"
+            class="steem-auth-input" :class="{ 'error': error }" />
           <span v-if="error" class="steem-auth-error-text">{{ error }}</span>
         </div>
-
         <div class="steem-auth-operation-info">
           <h3>Operation Details</h3>
           <p><strong>Type:</strong> {{ operation.type }}</p>
           <p><strong>Required Auth:</strong> {{ operation.requiredAuth }}</p>
         </div>
-
         <button @click="handleSubmit" class="steem-auth-button full-width" :disabled="loading">
           <span v-if="loading" class="steem-auth-spinner"></span>
           <span>{{ loading ? 'Processing...' : 'Submit' }}</span>
@@ -42,7 +33,6 @@ import client from '../helpers/client';
 import { useAuthStore } from '../stores/auth';
 import TransactionService from '../services/transaction';
 
-// Define the extended operation type that includes field values
 export type ExtendedOperation = {
   type: string;
   fields: Record<string, any>;
@@ -71,13 +61,6 @@ const verifyActiveKey = (privateKey: string): boolean => {
   try {
     const key = PrivateKey.fromString(privateKey);
     const publicKey = key.createPublic(client.addressPrefix).toString();
-    
-    // Log the public key derived from the private key
-    console.log('Derived public key:', publicKey);
-    
-    // Log the account's active public key for comparison
-    console.log('Account active key:', authStore.state.account?.active.key_auths[0][0]);
-    
     return publicKey === authStore.state.account?.active.key_auths[0][0];
   } catch (err) {
     console.error('Error verifying active key:', err);
@@ -98,26 +81,21 @@ const handleSubmit = async () => {
     error.value = 'Active key is required';
     return;
   }
-  
+
   loading.value = true;
   error.value = '';
-  
+
   try {
     console.log('Verifying active key...');
-    // Verify the active key by deriving the public key
     if (!verifyActiveKey(activeKey.value)) {
       error.value = 'Invalid active key. The provided key does not match your account\'s active public key.';
       loading.value = false;
       return;
     }
-    
-    console.log('Active key verified successfully.');
-
     let tx: any;
     let opType = props.operation.type;
 
     if (props.isMeeray) {
-      // Wrap in custom_json for Steem
       opType = 'custom_json';
       tx = {
         required_auths: [authStore.state.username],
@@ -134,20 +112,14 @@ const handleSubmit = async () => {
         })
       };
     } else {
-      // Native Steem op, build as before
       tx = {};
-      
-      // If fields is empty but we have fieldValues, use fieldValues directly
-      // This happens when TransactionService sends a complete operation payload
       if (Object.keys(props.operation.fields).length === 0 && props.operation.fieldValues) {
         tx = { ...props.operation.fieldValues };
       } else {
-        // Original logic for operations with defined fields
         Object.keys(props.operation.fields).forEach((key) => {
-          // Special handling for JSON fields
           if ((props.operation.type === 'custom_json' && key === 'json') ||
-              (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
-              (key.includes('json_meta'))) {
+            (props.operation.type === 'escrow_transfer' && key === 'json_meta') ||
+            (key.includes('json_meta'))) {
             if (typeof props.operation.fieldValues[key] !== 'string') {
               tx[key] = JSON.stringify(props.operation.fieldValues[key]);
             } else {
@@ -159,48 +131,33 @@ const handleSubmit = async () => {
         });
       }
     }
-
-    console.log('Sending transaction with payload:', tx);
-    console.log('Operation type:', opType);
-    console.log('Required auth:', props.operation.requiredAuth);
-
-    // Send the transaction
     const result = await TransactionService.send(
       opType,
       tx,
       { requiredAuth: 'active', activeKey: activeKey.value }
     );
-
-    // If we get here, the transaction was successful
-    console.log('Transaction successful, emitting success and closing modal');
     emit('success', result);
     closeModal();
   } catch (err: any) {
     console.error('Transaction error:', err);
-    
-    // Handle RPCError format
     if (err.name === 'RPCError') {
       console.log('RPC Error details:', err.jse_info);
-      
       if (err.message.includes('missing required active authority')) {
         error.value = 'Missing active authority. The blockchain rejected your active key. Please ensure you are using the correct active key for this account.';
       } else if (err.message.includes('does not have sufficient funds')) {
-        // Get the actual transfer amount from the operation
         const amount = props.operation.fieldValues.amount as string || '0';
         const [amountValue, currency] = amount.split(' ');
-        
+
         error.value = `Insufficient funds. Required: ${amountValue} ${currency}, Available: 0 ${currency}`;
       } else if (err.message.includes('missing required posting authority')) {
         error.value = 'Missing required posting authority';
       } else if (err.message.includes('invalid_scope')) {
         error.value = 'Invalid scope for this operation';
       } else {
-        // For other RPC errors, try to extract a user-friendly message
         const message = err.message.split(':')[1]?.trim() || err.message;
         error.value = message;
       }
     } else {
-      // Handle non-RPC errors
       error.value = err instanceof Error ? err.message : 'An unexpected error occurred';
     }
   } finally {

@@ -202,10 +202,16 @@ const createAuthStore = (): AuthStore => {
     };
 
     const addAccount = (account: StoredAccount) => {
-        if (!state.accounts.find(a => a.username === account.username)) {
+        const idx = state.accounts.findIndex(a => a.username === account.username && a.loginAuth === account.loginAuth);
+        if (idx === -1) {
             state.accounts.push(account);
-            persistAccounts();
+        } else {
+            // Update encryptedPk if provided
+            if (account.encryptedPk) {
+                state.accounts[idx].encryptedPk = account.encryptedPk;
+            }
         }
+        persistAccounts();
     };
 
     const removeAccount = (username: string) => {

@@ -9,7 +9,7 @@
         <div v-if="typedAccounts.length" class="steem-auth-accounts-row">
           <div v-for="acc in typedAccounts" :key="acc.username" class="steem-auth-account-card" @click="handleAccountCardClick(acc)">
             <img :src="`https://steemitimages.com/u/${acc.username}/avatar`" :alt="acc.username" class="steem-auth-account-avatar" />
-            <div class="steem-auth-account-username">{{ acc.username }}</div>
+            <div>{{ acc.username }}</div>
           </div>
         </div>
         <div class="steem-auth-login-section">
@@ -122,47 +122,4 @@ function handleAccountCardClick(acc: { username: string; loginAuth: string; acce
   emit('auto-login', acc);
 }
 </script>
-
-<style>
-.steem-auth-accounts-row {
-  display: flex;
-  gap: 1em;
-  margin-bottom: 1.5em;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-}
-.steem-auth-account-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.5em 1em 0.7em 1em;
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
-  min-width: 80px;
-  max-width: 110px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.steem-auth-account-card:hover {
-  border-color: #3182ce;
-  box-shadow: 0 2px 8px rgba(49,130,206,0.12);
-}
-.steem-auth-account-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 0.4em;
-  background: #e2e8f0;
-}
-.steem-auth-account-username {
-  font-size: 0.97em;
-  font-weight: 500;
-  color: #222;
-  text-align: center;
-  word-break: break-all;
-}
-</style>
 

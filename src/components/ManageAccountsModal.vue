@@ -14,16 +14,10 @@
               <span v-if="acc.username === currentUsername" class="steem-auth-accounts-current">(Current)</span>
             </div>
             <div class="steem-auth-accounts-actions">
-              <button
-                class="steem-auth-button"
-                :disabled="acc.username === currentUsername"
-                @click="$emit('switch', acc.username)"
-              >Switch</button>
-              <button
-                class="steem-auth-button steem-auth-button-danger"
-                :disabled="acc.username === currentUsername"
-                @click="confirmDelete(acc.username)"
-              >Delete</button>
+              <button class="steem-auth-button" :disabled="acc.username === currentUsername"
+                @click="$emit('switch', acc.username)">Switch</button>
+              <button class="steem-auth-button steem-auth-button-danger" :disabled="acc.username === currentUsername"
+                @click="confirmDelete(acc.username)">Delete</button>
             </div>
           </div>
         </div>
@@ -64,5 +58,3 @@ function doDelete() {
   }
 }
 </script>
-
-// Styles have been moved to global.css 

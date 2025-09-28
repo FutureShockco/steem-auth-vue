@@ -34,7 +34,7 @@
                                     <button class="steem-auth-dropdown-item" @click="handleManageAccounts">
                                         Manage Accounts
                                     </button>
-                                    <div class="steem-auth-dropdown-divider"></div>
+                                    <div class="steem-auth-divider"></div>
                                     <button class="steem-auth-dropdown-item steem-auth-button-danger"
                                         @click="handleLogout">
                                         Logout
@@ -203,35 +203,63 @@ const handleSubmit = async (): Promise<void> => {
     try {
         // If using Steem direct login, show PIN modal after posting key validation
         if (!useKeychain.value && props.enableDirectLogin) {
-            // Validate posting key first (simulate what handleLogin does)
-            const isValid = await store.validatePostingKey(username.value, postingKey.value);
-            if (!isValid) {
-                postingKeyError.value = 'Invalid posting key';
+            // Check if account already exists with encryptedPk
+            const existingAccount = store.accounts.find(a => a.username === username.value && a.loginAuth === 'steem');
+            if (existingAccount && existingAccount.encryptedPk) {
+                // Show PIN modal in 'unlock' mode
+                pinMode.value = 'unlock';
+                showPinModal.value = true;
+                showModal.value = false;
+                pendingPinCallback.value = async (pin: string) => {
+                    loading.value = true;
+                    await EncryptionService.generatePinKey(username.value, pin);
+                    // Try to decrypt to verify PIN
+                    const decrypted = await EncryptionService.decryptPrivateKey(existingAccount.encryptedPk!);
+                    if (!decrypted) {
+                        error.value = 'Incorrect PIN.';
+                        loading.value = false;
+                        return;
+                    }
+                    // Login with decrypted posting key
+                    await store.handleLogin(username.value, false, decrypted, pin);
+                    showPinModal.value = false;
+                    showModal.value = false;
+                    loading.value = false;
+                };
+                loading.value = false;
+                return;
+            } else {
+                // Validate posting key first (simulate what handleLogin does)
+                const isValid = await store.validatePostingKey(username.value, postingKey.value);
+                if (!isValid) {
+                    postingKeyError.value = 'Invalid posting key';
+                    loading.value = false;
+                    return;
+                }
+                // Show PIN modal in 'set' mode
+                pinMode.value = 'set';
+                showPinModal.value = true;
+                showModal.value = false;
+                pendingPinCallback.value = async (pin: string) => {
+                    loading.value = true;
+                    // Derive encryption key from PIN
+                    await EncryptionService.generatePinKey(username.value, pin);
+                    // Encrypt posting key
+                    const encryptedPk = await EncryptionService.encryptAndReturnPrivateKey(postingKey.value);
+                    // Now call handleLogin with postingKey (legacy, for state/account setup)
+                    await store.handleLogin(username.value, false, postingKey.value, pin);
+                    // Overwrite the encryptedPk in the stored account (handleLogin will use legacy method)
+                    const accIdx = store.accounts.findIndex(a => a.username === username.value && a.loginAuth === 'steem');
+                    if (accIdx !== -1) {
+                        store.accounts[accIdx].encryptedPk = encryptedPk;
+                    }
+                    showPinModal.value = false;
+                    showModal.value = false;
+                    loading.value = false;
+                };
                 loading.value = false;
                 return;
             }
-            // Show PIN modal in 'set' mode
-            pinMode.value = 'set';
-            showPinModal.value = true;
-            pendingPinCallback.value = async (pin: string) => {
-                loading.value = true;
-                // Derive encryption key from PIN
-                await EncryptionService.generatePinKey(username.value, pin);
-                // Encrypt posting key
-                const encryptedPk = await EncryptionService.encryptAndReturnPrivateKey(postingKey.value);
-                // Now call handleLogin with postingKey (legacy, for state/account setup)
-                await store.handleLogin(username.value, false, postingKey.value);
-                // Overwrite the encryptedPk in the stored account (handleLogin will use legacy method)
-                const accIdx = store.accounts.findIndex(a => a.username === username.value && a.loginAuth === 'steem');
-                if (accIdx !== -1) {
-                    store.accounts[accIdx].encryptedPk = encryptedPk;
-                }
-                showPinModal.value = false;
-                showModal.value = false;
-                loading.value = false;
-            };
-            loading.value = false;
-            return;
         }
         await store.handleLogin(username.value, useKeychain.value, postingKey.value);
         if (!useKeychain.value) {
@@ -487,6 +515,26 @@ const handleManageAccountsClose = () => {
 const handleManageAccountsSwitch = async (username: string) => {
     await store.switchAccount(username);
     showManageAccountsModal.value = false;
+    // After switching, check if the new account is a Steem account with encryptedPk
+    const acc = store.accounts.find(a => a.username === username && a.loginAuth === 'steem');
+    if (acc && acc.encryptedPk) {
+        pinMode.value = 'unlock';
+        showPinModal.value = true;
+        showModal.value = false;
+        pendingPinCallback.value = async (pin: string) => {
+            loading.value = true;
+            await EncryptionService.generatePinKey(acc.username, pin);
+            const decrypted = await EncryptionService.decryptPrivateKey(acc.encryptedPk!);
+            if (!decrypted) {
+                error.value = 'Incorrect PIN.';
+                loading.value = false;
+                return;
+            }
+            await store.handleLogin(acc.username, false, decrypted, pin);
+            showPinModal.value = false;
+            loading.value = false;
+        };
+    }
 };
 
 const handleManageAccountsDelete = (username: string) => {
@@ -512,102 +560,34 @@ const handleAutoLogin = async (acc: { username: string; loginAuth: string; acces
     }
     if (acc.loginAuth === 'steem') {
         useKeychain.value = false;
-        await handleSubmit();
-        showModal.value = false;
-        return;
+        // If encryptedPk exists, prompt for PIN in unlock mode
+        if (acc.encryptedPk) {
+            pinMode.value = 'unlock';
+            showPinModal.value = true;
+            showModal.value = false;
+            pendingPinCallback.value = async (pin: string) => {
+                loading.value = true;
+                await EncryptionService.generatePinKey(acc.username, pin);
+                const decrypted = await EncryptionService.decryptPrivateKey(acc.encryptedPk!);
+                if (!decrypted) {
+                    error.value = 'Incorrect PIN.';
+                    loading.value = false;
+                    return;
+                }
+                await store.handleLogin(acc.username, false, decrypted, pin);
+                showPinModal.value = false;
+                showModal.value = false;
+                loading.value = false;
+            };
+            return;
+        } else {
+            // No encryptedPk, fallback to normal flow (require posting key)
+            await handleSubmit();
+            showModal.value = false;
+            return;
+        }
     }
     // fallback: just prefill username
     showModal.value = false;
 };
 </script>
-
-<style scoped>
-.steem-auth-account-switcher {
-    margin-bottom: 1em;
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-}
-
-.steem-auth-button-danger {
-    background: #e53e3e;
-    color: #fff;
-}
-
-.steem-auth-dropdown-wrapper {
-    position: relative;
-    display: inline-block;
-}
-
-.steem-auth-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    min-width: 180px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-    z-index: 1000;
-    padding: 0.5em 0;
-}
-
-.steem-auth-dropdown-current {
-    padding: 0.5em 1em;
-    font-size: 0.95em;
-    color: #333;
-    border-bottom: 1px solid #eee;
-}
-
-.steem-auth-dropdown-list {
-    max-height: 180px;
-    overflow-y: auto;
-}
-
-.steem-auth-dropdown-item {
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    padding: 0.5em 1em;
-    font-size: 1em;
-    cursor: pointer;
-    color: #333;
-    transition: background 0.15s;
-}
-
-.steem-auth-dropdown-item:disabled {
-    color: #aaa;
-    cursor: not-allowed;
-}
-
-.steem-auth-dropdown-item:not(:disabled):hover {
-    background: #f5f5f5;
-}
-
-.steem-auth-dropdown-divider {
-    border-top: 1px solid #eee;
-    margin: 0.5em 0;
-}
-
-.steem-auth-add-account-heading {
-    margin-bottom: 1em;
-    text-align: left;
-}
-
-.steem-auth-current-account-msg {
-    font-size: 0.98em;
-    color: #444;
-    margin-bottom: 0.25em;
-}
-
-.steem-auth-button {
-    min-width: 160px;
-    max-width: 220px;
-    width: 180px;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    display: inline-block;
-}
-</style>
