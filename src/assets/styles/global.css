@@ -21,20 +21,7 @@
   --transition: all 0.15s ease;
 }
 
-/* Dark theme variables */
-.dark-theme {
-  --steem-auth-primary-color: #3b82f6;
-  --steem-auth-primary-hover: #2563eb;
-  --steem-auth-secondary-color: #10B981;
-  --steem-auth-background: #1e293b;
-  --steem-auth-card-background: #0f172a;
-  --steem-auth-border-color: #334155;
-  --steem-auth-error-color: #ef4444;
-  --steem-auth-text-color: #FFFFFF;
-  --steem-auth-text-primary: #e2e8f0;
-  --steem-auth-text-secondary: #94a3b8;
-  --steem-auth-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
+
 
 /* Common styles for all components */
 .steem-auth-component {
@@ -79,29 +66,7 @@
   width: 100%;
 }
 
-/* Theme toggle button */
-.steem-auth-theme-toggle {
-  background: transparent;
-  border: none;
-  color: var(--steem-auth-text-primary);
-  font-size: 1.25rem;
-  padding: 0.25rem;
-  cursor: pointer;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 0.5rem;
-  transition: var(--transition);
-}
 
-.steem-auth-theme-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.dark-theme .steem-auth-theme-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
 
 /* Input styles */
 .steem-auth-input {

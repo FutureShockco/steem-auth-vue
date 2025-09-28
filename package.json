@@ -1,6 +1,6 @@
 {
   "name": "steem-auth-vue",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "A Vue 3 authentication component for Steem blockchain and MeeRay sidechain",
   "main": "dist/steem-auth-vue.umd.js",
   "module": "dist/steem-auth-vue.es.js",

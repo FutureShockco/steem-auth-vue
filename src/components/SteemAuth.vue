@@ -1,14 +1,6 @@
 <template>
     <div class="steem-auth steem-auth-component">
-        <!-- Button Group (Theme Toggle + Login/User Info) -->
-        <div class="steem-auth-container" :class="{ 'steem-auth--dark': isDarkTheme }">
-            <!-- Theme Toggle Button -->
-            <button v-if="props.displayDarkModeToggle" class="steem-auth-theme-toggle" @click="toggleTheme"
-                type="button" :title="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'">
-                {{ isDarkTheme ? '☀️' : '🌙' }}
-            </button>
-
-            <!-- Login Button / User Info -->
+        <div class="steem-auth-container">
             <template v-if="!store.state.isAuthenticated">
                 <button @click="openLoginModal" class="steem-auth-button">
                     <slot name="trigger">
@@ -94,15 +86,10 @@ import type { AuthStore } from '../stores/auth';
 import { setPinRequestHandler, setActiveKeyRequestHandler } from '../services/transaction';
 import { initClient } from '@/helpers/client';
 
-// Define configuration props with defaults
 const props = withDefaults(defineProps<{
-    // Auth method configuration
-    displayDarkModeToggle?: boolean;
     enableSteemLogin?: boolean;
     enableKeychain?: boolean;
     enableDirectLogin?: boolean;
-    // Default theme
-    defaultDarkMode?: boolean;
     appName: string;
     callbackURL: string;
     steemApi?: string;
@@ -110,21 +97,19 @@ const props = withDefaults(defineProps<{
 }>(), {
     enableSteemLogin: true,
     enableKeychain: true,
-    enableDirectLogin: true,
-    defaultDarkMode: false,
+    enableDirectLogin: true
 });
 
-// Emit events for theme changes
 const emit = defineEmits<{
-    (e: 'theme-change', isDark: boolean): void;
     (e: 'modalOpen'): void;
     (e: 'modalClose'): void;
 }>();
 
+// 'emit' is only used for type inference, not called directly in this file.
+
 // Initialize store with proper typing
 const store = useAuthStore() as AuthStore;
 
-// Define reactive refs with proper types
 const showModal = ref<boolean>(false);
 const username = ref<string>('');
 const postingKey = ref<string>('');
@@ -134,7 +119,6 @@ const loading = ref<boolean>(false);
 const error = ref<string>('');
 const usernameError = ref<string>('');
 const postingKeyError = ref<string>('');
-const isDarkTheme = ref<boolean>(props.defaultDarkMode);
 const selectedAccount = ref(store.state.username);
 const showDropdown = ref(false);
 const addingAccount = ref(false);
@@ -145,10 +129,8 @@ const pendingPinCallback = ref<null | ((pin: string) => void)>(null);
 const showActiveKeyModal = ref(false);
 const pendingOperation = ref<ExtendedOperation | null>(null);
 
-// Add isClient ref to track client-side rendering
 const isClient = ref(false);
 
-// Refs for programmatic active key prompting
 const activeKeyPromiseResolve = ref<null | ((value: string) => void)>(null);
 const activeKeyPromiseReject = ref<null | ((reason?: any) => void)>(null);
 
@@ -206,7 +188,6 @@ const validateForm = (): boolean => {
     return isValid;
 };
 
-// Watch for authentication state changes
 watch(() => store.state.isAuthenticated, (newValue) => {
     if (newValue && showModal.value) {
         showModal.value = false;
@@ -281,9 +262,6 @@ watch(() => [props.appName, props.callbackURL, props.steemApi, props.steemApiOpt
 
 onMounted(() => {
     isClient.value = true;
-    // Initialize theme
-    initTheme();
-
     // Only check for keychain if it's enabled
     if (props.enableKeychain) {
         hasKeychain.value = checkKeychain();
@@ -292,14 +270,11 @@ onMounted(() => {
             hasKeychain.value = checkKeychain();
         }, 1000);
     }
-
     // Handle SteemLogin callback if enabled
     if (props.enableSteemLogin) {
         handleSteemLoginCallback();
     }
-
     store.checkUser();
-
     // Hide dropdown on outside click
     if (typeof document !== 'undefined') {
         document.addEventListener('click', (e) => {
@@ -346,55 +321,6 @@ onMounted(() => {
     });
 });
 
-// Theme management
-const THEME_STORAGE_KEY = 'steem-auth-theme';
-
-const applyTheme = (isDark: boolean) => {
-    if (typeof document !== 'undefined') {
-        if (isDark) {
-            document.documentElement.classList.add('dark-theme');
-        } else {
-            document.documentElement.classList.remove('dark-theme');
-        }
-    }
-    if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-    }
-    emit('theme-change', isDark);
-};
-
-const toggleTheme = () => {
-    isDarkTheme.value = !isDarkTheme.value;
-    applyTheme(isDarkTheme.value);
-};
-
-const initTheme = () => {
-    if (typeof window === 'undefined') return;
-    // Check if theme is stored in localStorage
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme) {
-        isDarkTheme.value = storedTheme === 'dark';
-    } else if (props.defaultDarkMode) {
-        isDarkTheme.value = true;
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        // Use system preference if no stored theme
-        isDarkTheme.value = true;
-    }
-
-    // Apply the theme
-    applyTheme(isDarkTheme.value);
-
-    // Listen for system theme changes
-    if (window.matchMedia) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            // Only auto-change if user hasn't manually set a theme
-            if (!localStorage.getItem(THEME_STORAGE_KEY)) {
-                isDarkTheme.value = e.matches;
-                applyTheme(isDarkTheme.value);
-            }
-        });
-    }
-};
 
 const promptForActiveKey = (operationDetails: ExtendedOperation): Promise<string> => {
     if (store.state.loginAuth !== 'steem') {
