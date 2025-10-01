@@ -307,4 +307,8 @@ class TransactionService {
     }
 }
 
+// Export the class for static methods (hooks)
+export { TransactionService };
+
+// Export instance for transaction sending
 export default new TransactionService();
