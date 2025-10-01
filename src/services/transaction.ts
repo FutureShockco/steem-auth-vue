@@ -36,7 +36,87 @@ export const setActiveKeyRequestHandler = (handler: (username: string, operation
     activeKeyRequestHandler = handler;
 };
 
+/**
+ * Transaction hook callback signature
+ * @param txId - The transaction ID from the blockchain
+ * @param operation - The operation type (e.g., 'custom_json', 'transfer')
+ * @param params - The operation parameters
+ * @param options - Additional options passed to send()
+ */
+export type TransactionHookCallback = (
+    txId: string,
+    operation: string,
+    params: any,
+    options?: any
+) => void;
+
 class TransactionService {
+    /**
+     * Global transaction hooks that get called whenever a transaction is sent
+     * Allows external apps to track all transactions without modifying code
+     */
+    private static transactionHooks: Array<TransactionHookCallback> = [];
+
+    /**
+     * Register a global transaction hook
+     * The callback will be invoked for every transaction sent via TransactionService
+     * 
+     * @param callback - Function to call when transactions are sent
+     * @returns Cleanup function to unregister the hook
+     * 
+     * @example
+     * ```typescript
+     * const unregister = TransactionService.registerTransactionHook((txId, operation, params) => {
+     *   console.log('Transaction sent:', txId, operation)
+     *   // Track transaction, show notification, etc.
+     * })
+     * 
+     * // Later, to stop listening:
+     * unregister()
+     * ```
+     */
+    static registerTransactionHook(callback: TransactionHookCallback): () => void {
+        if (typeof callback !== 'function') {
+            throw new TypeError('Transaction hook must be a function');
+        }
+        
+        this.transactionHooks.push(callback);
+        console.log(`[TransactionService] Hook registered (${this.transactionHooks.length} active)`);
+        
+        // Return unregister function
+        return () => this.unregisterTransactionHook(callback);
+    }
+
+    /**
+     * Unregister a transaction hook
+     * 
+     * @param callback - The callback function to remove
+     */
+    static unregisterTransactionHook(callback: TransactionHookCallback): void {
+        const initialLength = this.transactionHooks.length;
+        this.transactionHooks = this.transactionHooks.filter(hook => hook !== callback);
+        
+        if (this.transactionHooks.length < initialLength) {
+            console.log(`[TransactionService] Hook unregistered (${this.transactionHooks.length} active)`);
+        }
+    }
+
+    /**
+     * Clear all transaction hooks
+     * Useful for testing or cleanup
+     */
+    static clearTransactionHooks(): void {
+        const count = this.transactionHooks.length;
+        this.transactionHooks = [];
+        console.log(`[TransactionService] Cleared ${count} hook(s)`);
+    }
+
+    /**
+     * Get the number of active transaction hooks
+     */
+    static getHookCount(): number {
+        return this.transactionHooks.length;
+    }
     public async send(trx: string, payload: any, options: { requiredAuth?: 'posting' | 'active' | 'owner', activeKey?: string } = {}) {
         const authStore = useAuthStore();
         const transactionStore = useTransactionStore();
@@ -111,6 +191,31 @@ class TransactionService {
         });
     }
 
+    /**
+     * Helper method to call all registered transaction hooks
+     * @private
+     */
+    private _callTransactionHooks(txId: string, operation: string, params: any, options?: any): void {
+        const hooks = (this.constructor as typeof TransactionService).transactionHooks;
+        
+        if (txId && hooks.length > 0) {
+            // Call hooks asynchronously to not block the return
+            setImmediate(() => {
+                hooks.forEach((hook, index) => {
+                    try {
+                        hook(txId, operation, params, options);
+                    } catch (error) {
+                        console.error(
+                            `[TransactionService] Hook #${index} error:`, 
+                            error instanceof Error ? error.message : error
+                        );
+                        // Don't let hook errors break the transaction flow
+                    }
+                });
+            });
+        }
+    }
+
     private async _sendWithKeychain(trx: string, transaction: any, username: string, options: any, resolve: any, reject: any) {
         const transactionStore = useTransactionStore();
         if (typeof window !== 'undefined' && window.steem_keychain) {
@@ -124,6 +229,10 @@ class TransactionService {
                 (response: any) => {
                     if (response.success) {
                         transactionStore.finishTransaction(true, response.result.id, `Transaction ${trx} sent via Keychain!`);
+                        
+                        // Call transaction hooks
+                        this._callTransactionHooks(response.result.id, trx, transaction[0][1], options);
+                        
                         resolve(response.result as ITransaction);
                     } else {
                         transactionStore.finishTransaction(false, undefined, undefined, response.message || 'Keychain broadcast failed.');
@@ -153,6 +262,10 @@ class TransactionService {
                 reject(err);
             } else {
                 transactionStore.finishTransaction(true, result.id, `Transaction ${trx} sent via SteemLogin!`);
+                
+                // Call transaction hooks
+                this._callTransactionHooks(result.id, trx, transaction[0][1], {});
+                
                 resolve(result as ITransaction);
             }
         });
@@ -170,6 +283,10 @@ class TransactionService {
                 result.id, 
                 `Transaction ${trx} completed successfully!`
             );
+            
+            // Call transaction hooks
+            this._callTransactionHooks(result.id, trx, transaction[0][1], {});
+            
             resolve(result as ITransaction);
         } catch (error: any) {
             let errorMessage = 'Failed to send transaction with key.';
